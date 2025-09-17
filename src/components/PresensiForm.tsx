@@ -533,8 +533,11 @@ export const PresensiForm = () => {
     if (cameraStartedRef.current) return;
 
     try {
-      setLoadingMessage("Memulai kamera...");
       console.log("Starting camera...");
+      
+      // Open modal first
+      setCameraModalOpen(true);
+      setLoadingMessage("Memulai kamera...");
       
       // Check if getUserMedia is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -542,16 +545,11 @@ export const PresensiForm = () => {
       }
 
       const constraints: MediaStreamConstraints = {
-        video: isMobile 
-          ? { 
-              facingMode: "user",
-              width: { ideal: 640, max: 1280 },
-              height: { ideal: 480, max: 720 }
-            }
-          : { 
-              width: { ideal: 640, max: 1280 },
-              height: { ideal: 480, max: 720 }
-            }
+        video: {
+          width: { ideal: 640, max: 1280 },
+          height: { ideal: 480, max: 720 },
+          ...(isMobile && { facingMode: "user" })
+        }
       };
 
       console.log("Getting user media with constraints:", constraints);
@@ -559,27 +557,28 @@ export const PresensiForm = () => {
       streamRef.current = stream;
       console.log("Got media stream:", stream);
 
+      // Wait a bit for modal to render
+      await new Promise(resolve => setTimeout(resolve, 200));
+
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.muted = true;
-        videoRef.current.playsInline = true;
-        videoRef.current.autoplay = true;
+        const video = videoRef.current;
+        video.srcObject = stream;
+        video.muted = true;
+        video.playsInline = true;
+        
+        console.log("Video element configured, waiting for load...");
 
-        console.log("Video element configured, waiting for metadata...");
-
-        // Wait for video to be ready with better error handling
+        // Wait for video to be ready
         await new Promise<void>((resolve, reject) => {
-          const video = videoRef.current!;
-          
           const timeoutId = setTimeout(() => {
             console.error("Video loading timeout");
             reject(new Error("Video loading timeout"));
-          }, 15000);
+          }, 10000);
 
-          const onLoadedMetadata = () => {
-            console.log("Video metadata loaded");
+          const onCanPlay = () => {
+            console.log("Video can play");
             clearTimeout(timeoutId);
-            video.removeEventListener("loadedmetadata", onLoadedMetadata);
+            video.removeEventListener("canplay", onCanPlay);
             video.removeEventListener("error", onError);
             resolve();
           };
@@ -587,35 +586,32 @@ export const PresensiForm = () => {
           const onError = (error: Event) => {
             console.error("Video error:", error);
             clearTimeout(timeoutId);
-            video.removeEventListener("loadedmetadata", onLoadedMetadata);
+            video.removeEventListener("canplay", onCanPlay);
             video.removeEventListener("error", onError);
             reject(new Error("Video failed to load"));
           };
 
-          video.addEventListener("loadedmetadata", onLoadedMetadata);
+          video.addEventListener("canplay", onCanPlay);
           video.addEventListener("error", onError);
           
-          // Force play
+          // Try to play
           video.play().catch((playError) => {
-            console.warn("Autoplay failed:", playError);
-            // Don't reject here, video might still work
+            console.warn("Autoplay failed, but continuing:", playError);
           });
         });
       }
 
       cameraStartedRef.current = true;
       setCameraActive(true);
-      setCameraModalOpen(true);
       setFaceDetected(false);
+      setLoadingMessage("");
 
       console.log("Camera started successfully");
 
-      // Start the drawing loop with a slight delay
-      setTimeout(() => {
-        if (!rafRef.current && cameraActive) {
-          rafRef.current = requestAnimationFrame(drawLoop);
-        }
-      }, 100);
+      // Start the drawing loop immediately
+      if (!rafRef.current) {
+        rafRef.current = requestAnimationFrame(drawLoop);
+      }
 
     } catch (error) {
       console.error("Error starting camera:", error);
