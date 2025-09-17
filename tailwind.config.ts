@@ -57,6 +57,12 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        honda: {
+          red: "hsl(var(--honda-red))",
+          "red-dark": "hsl(var(--honda-red-dark))",
+          silver: "hsl(var(--honda-silver))",
+          dark: "hsl(var(--honda-dark))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

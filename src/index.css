@@ -38,6 +38,23 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
+    /* Honda brand colors */
+    --honda-red: 0 85% 50%;
+    --honda-red-dark: 0 85% 40%;
+    --honda-silver: 210 20% 85%;
+    --honda-dark: 220 20% 15%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--honda-red)), hsl(var(--honda-red-dark)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--honda-red) / 0.9), hsl(var(--honda-red-dark) / 0.8));
+
+    /* Shadows */
+    --shadow-elegant: 0 10px 30px -10px hsl(var(--honda-red) / 0.3);
+    --shadow-glow: 0 0 40px hsl(var(--honda-red) / 0.2);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
     --sidebar-background: 0 0% 98%;
 
     --sidebar-foreground: 240 5.3% 26.1%;
