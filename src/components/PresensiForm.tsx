@@ -63,7 +63,6 @@ export const PresensiForm = () => {
   const detectionsRef = useRef<any[]>([]);
   const cameraStartedRef = useRef(false);
   const [faceDetected, setFaceDetected] = useState(false);
-  const [mediaDevicesReady, setMediaDevicesReady] = useState(false);
 
   const [locationData, setLocationData] = useState({
     Flatitude: "0",
@@ -107,26 +106,13 @@ export const PresensiForm = () => {
     }));
   }, []);
 
-  // Check if media devices are available on mount
-  useEffect(() => {
-    const checkMediaDevices = async () => {
-      try {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          setMediaDevicesReady(true);
-        }
-      } catch (error) {
-        console.warn("Media devices not available:", error);
-      }
-    };
-    checkMediaDevices();
-  }, []);
-
   // Initialize MediaPipe Face Detection
   useEffect(() => {
     let mounted = true;
     
     const initFaceDetection = async () => {
       try {
+        console.log("Initializing MediaPipe Face Detection...");
         const faceDetection = new FaceDetection({
           locateFile: (file) =>
             `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`,
@@ -146,13 +132,15 @@ export const PresensiForm = () => {
         
         if (mounted) {
           faceDetectorRef.current = faceDetection;
+          console.log("Face detection initialized successfully");
         }
       } catch (error) {
         console.error("Failed to initialize face detection:", error);
       }
     };
 
-    initFaceDetection();
+    // Add a small delay to ensure DOM is ready
+    setTimeout(initFaceDetection, 1000);
 
     return () => {
       mounted = false;
@@ -542,49 +530,75 @@ export const PresensiForm = () => {
 
   // Start camera with proper initialization
   const startCamera = useCallback(async () => {
-    if (cameraStartedRef.current || !mediaDevicesReady) return;
+    if (cameraStartedRef.current) return;
 
     try {
       setLoadingMessage("Memulai kamera...");
+      console.log("Starting camera...");
       
+      // Check if getUserMedia is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Camera not supported by this browser");
+      }
+
       const constraints: MediaStreamConstraints = {
         video: isMobile 
           ? { 
-              facingMode: { ideal: "user" },
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
+              facingMode: "user",
+              width: { ideal: 640, max: 1280 },
+              height: { ideal: 480, max: 720 }
             }
           : { 
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
+              width: { ideal: 640, max: 1280 },
+              height: { ideal: 480, max: 720 }
             }
       };
 
+      console.log("Getting user media with constraints:", constraints);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
+      console.log("Got media stream:", stream);
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.muted = true;
         videoRef.current.playsInline = true;
+        videoRef.current.autoplay = true;
 
-        // Wait for video to be ready
+        console.log("Video element configured, waiting for metadata...");
+
+        // Wait for video to be ready with better error handling
         await new Promise<void>((resolve, reject) => {
           const video = videoRef.current!;
+          
           const timeoutId = setTimeout(() => {
+            console.error("Video loading timeout");
             reject(new Error("Video loading timeout"));
-          }, 10000);
+          }, 15000);
 
           const onLoadedMetadata = () => {
+            console.log("Video metadata loaded");
             clearTimeout(timeoutId);
             video.removeEventListener("loadedmetadata", onLoadedMetadata);
+            video.removeEventListener("error", onError);
             resolve();
           };
 
+          const onError = (error: Event) => {
+            console.error("Video error:", error);
+            clearTimeout(timeoutId);
+            video.removeEventListener("loadedmetadata", onLoadedMetadata);
+            video.removeEventListener("error", onError);
+            reject(new Error("Video failed to load"));
+          };
+
           video.addEventListener("loadedmetadata", onLoadedMetadata);
+          video.addEventListener("error", onError);
           
+          // Force play
           video.play().catch((playError) => {
-            console.warn("Autoplay failed, but video should still work:", playError);
+            console.warn("Autoplay failed:", playError);
+            // Don't reject here, video might still work
           });
         });
       }
@@ -594,10 +608,14 @@ export const PresensiForm = () => {
       setCameraModalOpen(true);
       setFaceDetected(false);
 
-      // Start the drawing loop
-      if (!rafRef.current) {
-        rafRef.current = requestAnimationFrame(drawLoop);
-      }
+      console.log("Camera started successfully");
+
+      // Start the drawing loop with a slight delay
+      setTimeout(() => {
+        if (!rafRef.current && cameraActive) {
+          rafRef.current = requestAnimationFrame(drawLoop);
+        }
+      }, 100);
 
     } catch (error) {
       console.error("Error starting camera:", error);
@@ -611,7 +629,7 @@ export const PresensiForm = () => {
     } finally {
       setLoadingMessage("");
     }
-  }, [drawLoop, isMobile, mediaDevicesReady]);
+  }, [drawLoop, isMobile, cameraActive]);
 
   // Stop camera
   const stopCamera = useCallback(() => {
@@ -652,7 +670,7 @@ export const PresensiForm = () => {
     return isIdChecked && !idNeedsRecheck && formData.presensi.trim() !== "";
   };
 
-  const isCameraEnabled = () => isFormValid() && mediaDevicesReady;
+  const isCameraEnabled = () => isFormValid();
   const isSubmitEnabled = () => isFormValid() && capturedImage;
 
   // Text wrapping utility for overlay
@@ -999,8 +1017,6 @@ export const PresensiForm = () => {
                   <CameraIcon className="mr-2 h-6 w-6" />
                   {!isIdChecked || idNeedsRecheck 
                     ? "Lengkapi data terlebih dahulu" 
-                    : !mediaDevicesReady 
-                    ? "Kamera tidak tersedia"
                     : "Buka Kamera untuk Verifikasi"}
                 </Button>
               ) : (
