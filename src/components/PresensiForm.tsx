@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingScreen } from "./LoadingScreen";
-import { FaceDetection } from "@mediapipe/face_detection";
+import * as faceapi from "@vladmandic/face-api";
 
 const API_KEY =
   "AKfycbyLHjveyhMYt7KGjxtSJov1u_nsszZzK0PKyZY-vuxi7C3mMBdMcqGII2vveWZV_jKdZw";
@@ -59,8 +59,8 @@ export const PresensiForm = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
-  const faceDetectorRef = useRef<FaceDetection | null>(null);
-  const detectionsRef = useRef<any[]>([]);
+  const faceApiLoadedRef = useRef(false);
+  const detectionsRef = useRef<faceapi.FaceDetection[]>([]);
   const cameraStartedRef = useRef(false);
   const [faceDetected, setFaceDetected] = useState(false);
 
@@ -83,9 +83,6 @@ export const PresensiForm = () => {
     message: "",
   });
 
-  // Check if mobile device
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
   // Real-time clock update
   useEffect(() => {
     const interval = setInterval(() => {
@@ -106,53 +103,34 @@ export const PresensiForm = () => {
     }));
   }, []);
 
-  // Initialize MediaPipe Face Detection
+  // Initialize Face-API
   useEffect(() => {
     let mounted = true;
     
-    const initFaceDetection = async () => {
+    const initFaceAPI = async () => {
       try {
-        console.log("Initializing MediaPipe Face Detection...");
-        const faceDetection = new FaceDetection({
-          locateFile: (file) =>
-            `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`,
-        });
+        console.log("Initializing Face-API...");
         
-        faceDetection.setOptions({
-          model: "short",
-          minDetectionConfidence: 0.6,
-        });
+        // Load models from CDN
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
         
-        faceDetection.onResults((results) => {
-          if (mounted) {
-            detectionsRef.current = results.detections || [];
-            setFaceDetected((results.detections || []).length > 0);
-          }
-        });
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        ]);
         
         if (mounted) {
-          faceDetectorRef.current = faceDetection;
-          console.log("Face detection initialized successfully");
+          faceApiLoadedRef.current = true;
+          console.log("Face-API initialized successfully");
         }
       } catch (error) {
-        console.error("Failed to initialize face detection:", error);
+        console.error("Failed to initialize Face-API:", error);
       }
     };
 
-    // Add a small delay to ensure DOM is ready
-    setTimeout(initFaceDetection, 1000);
+    initFaceAPI();
 
     return () => {
       mounted = false;
-      try {
-        if (faceDetectorRef.current) {
-          // @ts-ignore
-          faceDetectorRef.current.close?.();
-        }
-      } catch (error) {
-        console.warn("Error closing face detector:", error);
-      }
-      faceDetectorRef.current = null;
     };
   }, []);
 
@@ -166,7 +144,7 @@ export const PresensiForm = () => {
     return storedUUID;
   };
 
-  // Get device fingerprint
+  // Get device fingerprint (simplified version)
   const getFingerprint = async () => {
     try {
       const canvas = document.createElement("canvas");
@@ -313,7 +291,7 @@ export const PresensiForm = () => {
     });
   };
 
-  // Handle ID changes
+  // Handle ID changes - mark as needing recheck
   const handleIdChange = (value: string) => {
     setFormData({ ...formData, id: value, nama: "", departemen: "" });
     setIsIdChecked(false);
@@ -326,6 +304,7 @@ export const PresensiForm = () => {
     setIsChecking(true);
 
     try {
+      // 1. Fetch user data
       setLoadingMessage("Mendapatkan data");
       const userData = await fetchUserData(formData.id.trim());
 
@@ -341,11 +320,14 @@ export const PresensiForm = () => {
         return;
       }
 
+      // 2. Get location
       setLoadingMessage("Mendapatkan lokasi");
       const locationResult = await getLocationAndDecode();
 
+      // 3. Generate unique code
       const deviceIdentity = await getDeviceIdentity();
 
+      // 4. Update form data
       setFormData((prev) => ({
         ...prev,
         id: userData.id,
@@ -355,6 +337,7 @@ export const PresensiForm = () => {
         fingerprint: deviceIdentity.fingerprint,
       }));
 
+      // Log development data to console
       console.log("=== DEVELOPMENT DATA ===");
       console.log("User Location:", locationResult.Flokasi);
       console.log("Unique Code:", deviceIdentity);
@@ -395,13 +378,21 @@ export const PresensiForm = () => {
     }
   };
 
+  // Validation logic
+  const isFormValid = () => {
+    return true;
+  };
+
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isCameraEnabled = () => isFormValid();
+  const isSubmitEnabled = () => isFormValid() && capturedImage;
+
   // Drawing loop for face detection overlay
   const drawLoop = useCallback(async () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const faceDetector = faceDetectorRef.current;
 
-    if (!video || !canvas || !cameraActive) {
+    if (!video || !canvas || !cameraActive || !faceApiLoadedRef.current) {
       if (cameraActive) {
         rafRef.current = requestAnimationFrame(drawLoop);
       }
@@ -409,19 +400,17 @@ export const PresensiForm = () => {
     }
 
     // Wait for video to have dimensions
-    if (video.videoWidth === 0 || video.videoHeight === 0) {
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+    
+    if (!videoWidth || !videoHeight) {
       rafRef.current = requestAnimationFrame(drawLoop);
       return;
     }
 
-    const w = video.videoWidth;
-    const h = video.videoHeight;
-
-    // Sync canvas size with video
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w;
-      canvas.height = h;
-    }
+    // Set canvas dimensions to match video
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) {
@@ -430,105 +419,112 @@ export const PresensiForm = () => {
     }
 
     // Clear canvas
-    ctx.clearRect(0, 0, w, h);
+    ctx.clearRect(0, 0, videoWidth, videoHeight);
+
+    // Draw video frame with mirroring for front camera
+    if (isMobile) {
+      ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
+    } else {
+      // Mirror for desktop
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, -videoWidth, 0, videoWidth, videoHeight);
+      ctx.restore();
+    }
 
     // Process face detection
     try {
-      if (faceDetector && video.readyState >= 2) {
-        await faceDetector.send({ image: video });
+      const detections = await faceapi.detectAllFaces(
+        video,
+        new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
+      );
+      
+      detectionsRef.current = detections;
+      setFaceDetected(detections.length > 0);
+
+      // Draw detection overlays
+      if (detections.length > 0) {
+        detections.forEach((detection) => {
+          try {
+            const box = detection.box;
+            
+            let x = box.x;
+            let y = box.y;
+            let width = box.width;
+            let height = box.height;
+
+            // Adjust for mirroring on desktop
+            if (!isMobile) {
+              x = videoWidth - x - width;
+            }
+
+            // Draw bounding box
+            ctx.strokeStyle = "#00ff00";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, width, height);
+
+            // Draw label
+            ctx.fillStyle = "rgba(0, 255, 0, 0.8)";
+            ctx.fillRect(x, y - 30, 150, 25);
+            ctx.fillStyle = "white";
+            ctx.font = "16px Arial";
+            ctx.fillText("Wajah terdeteksi", x + 5, y - 10);
+          } catch (error) {
+            // Ignore drawing errors
+          }
+        });
       }
     } catch (error) {
-      // Ignore face detection errors to avoid stopping the loop
-    }
-
-    // Draw face detection overlays
-    const detections = detectionsRef.current || [];
-    if (detections.length > 0) {
-      detections.forEach((detection) => {
-        try {
-          const bbox = detection.boundingBox;
-          if (!bbox) return;
-
-          let x, y, width, height;
-
-          if (bbox.xCenter !== undefined) {
-            // Normalized center-based coordinates
-            const centerX = bbox.xCenter * w;
-            const centerY = bbox.yCenter * h;
-            const boxWidth = bbox.width * w;
-            const boxHeight = bbox.height * h;
-            
-            x = centerX - boxWidth / 2;
-            y = centerY - boxHeight / 2;
-            width = boxWidth;
-            height = boxHeight;
-          } else {
-            // Fallback for other coordinate systems
-            x = (bbox.xMin || bbox.originX || 0) * w;
-            y = (bbox.yMin || bbox.originY || 0) * h;
-            width = bbox.width * w;
-            height = bbox.height * h;
-          }
-
-          // Mirror X coordinate for desktop (since video is mirrored)
-          if (!isMobile) {
-            x = w - x - width;
-          }
-
-          // Draw bounding box
-          ctx.strokeStyle = "#00ff00";
-          ctx.lineWidth = 3;
-          ctx.strokeRect(x, y, width, height);
-
-          // Draw face detected badge
-          const badgeWidth = Math.min(160, width);
-          const badgeHeight = 24;
-          const badgeX = x;
-          const badgeY = Math.max(0, y - badgeHeight - 5);
-
-          ctx.fillStyle = "rgba(0, 255, 0, 0.8)";
-          ctx.fillRect(badgeX, badgeY, badgeWidth, badgeHeight);
-          
-          ctx.fillStyle = "white";
-          ctx.font = "14px Arial";
-          ctx.textAlign = "left";
-          ctx.fillText("Wajah terdeteksi", badgeX + 5, badgeY + 16);
-        } catch (error) {
-          // Ignore drawing errors for individual detections
-        }
-      });
+      // Ignore detection errors
+      console.debug("Face detection error:", error);
     }
 
     // Draw timestamp and location overlay
     try {
       const currentTime = new Date().toLocaleString("id-ID");
-      const locationText =
-        formData.lokasi || locationData.Flokasi || "Lokasi tidak tersedia";
+      const locationText = formData.lokasi || locationData.Flokasi || "Lokasi tidak tersedia";
 
-      ctx.font = "16px Arial";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "bottom";
       ctx.fillStyle = "white";
-      ctx.strokeStyle = "black";
-      ctx.lineWidth = 2;
+      ctx.font = "14px Arial";
+      ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
 
-      const padding = 10;
-      const lines = [locationText, currentTime];
-      const lineHeight = 20;
+      // Draw location (wrapped if too long)
+      const maxWidth = videoWidth - 20;
+      const words = locationText.split(" ");
+      let line = "";
+      let lineHeight = 20;
+      let currentY = videoHeight - 50;
 
-      lines.forEach((line, index) => {
-        const y = h - padding - (lines.length - 1 - index) * lineHeight;
-        ctx.strokeText(line, padding, y);
-        ctx.fillText(line, padding, y);
+      words.forEach((word, index) => {
+        const testLine = line + word + " ";
+        const metrics = ctx.measureText(testLine);
+        
+        if (metrics.width > maxWidth && line !== "") {
+          ctx.fillText(line, 10, currentY);
+          line = word + " ";
+          currentY += lineHeight;
+        } else {
+          line = testLine;
+        }
+        
+        if (index === words.length - 1) {
+          ctx.fillText(line, 10, currentY);
+        }
       });
+
+      // Draw timestamp
+      ctx.fillText(currentTime, 10, videoHeight - 10);
     } catch (error) {
       // Ignore overlay drawing errors
     }
 
+    // Continue animation loop
     rafRef.current = requestAnimationFrame(drawLoop);
   }, [cameraActive, formData.lokasi, locationData.Flokasi, isMobile]);
 
-  // Start camera with proper initialization
   const startCamera = useCallback(async () => {
     if (cameraStartedRef.current) return;
 
@@ -541,7 +537,7 @@ export const PresensiForm = () => {
       
       // Check if getUserMedia is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("Camera not supported by this browser");
+        throw new Error("Camera access not supported");
       }
 
       const constraints: MediaStreamConstraints = {
@@ -622,31 +618,25 @@ export const PresensiForm = () => {
         message:
           "Tidak dapat mengakses kamera. Pastikan izin kamera sudah diberikan dan kamera tidak sedang digunakan aplikasi lain.",
       });
-    } finally {
+      setCameraModalOpen(false);
       setLoadingMessage("");
     }
-  }, [drawLoop, isMobile, cameraActive]);
+  }, [drawLoop, isMobile]);
 
-  // Stop camera
   const stopCamera = useCallback(() => {
-    // Cancel animation frame
+    // cancel animation
     if (rafRef.current) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
 
-    // Stop media tracks
+    // stop media tracks
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
 
-    // Reset video element
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-
-    // Reset states
+    // reset flags
     cameraStartedRef.current = false;
     setCameraActive(false);
     setCameraModalOpen(false);
@@ -654,27 +644,23 @@ export const PresensiForm = () => {
     detectionsRef.current = [];
   }, []);
 
-  // Auto-stop camera when modal closes
+  // make sure camera stops when modal closes from Dialog onOpenChange as well
   useEffect(() => {
-    if (!cameraModalOpen && cameraActive) {
+    if (!cameraModalOpen) {
       stopCamera();
     }
-  }, [cameraModalOpen, cameraActive, stopCamera]);
+  }, [cameraModalOpen, stopCamera]);
 
-  // Validation logic
-  const isFormValid = () => {
-    return isIdChecked && !idNeedsRecheck && formData.presensi.trim() !== "";
+  const openPreview = () => {
+    setPreviewModalOpen(true);
   };
 
-  const isCameraEnabled = () => isFormValid();
-  const isSubmitEnabled = () => isFormValid() && capturedImage;
-
-  // Text wrapping utility for overlay
-  const wrapText = (
+  // Fungsi untuk membungkus teks agar setelah ambil foto
+  function wrapText(
     context: CanvasRenderingContext2D,
     text: string,
     maxWidth: number
-  ) => {
+  ) {
     const words = text.split(" ");
     const lines: string[] = [];
     let line = "";
@@ -682,7 +668,8 @@ export const PresensiForm = () => {
     words.forEach((word) => {
       const testLine = line + word + " ";
       const metrics = context.measureText(testLine);
-      if (metrics.width > maxWidth && line !== "") {
+      const testWidth = metrics.width;
+      if (testWidth > maxWidth && line !== "") {
         lines.push(line.trim());
         line = word + " ";
       } else {
@@ -691,62 +678,74 @@ export const PresensiForm = () => {
     });
     lines.push(line.trim());
     return lines;
-  };
+  }
 
   const capturePhoto = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d");
 
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext("2d");
+      if (context) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
 
-    if (!context) return;
+        // Mirror untuk desktop
+        if (!isMobile) {
+          context.save();
+          context.scale(-1, 1);
+          context.drawImage(
+            video,
+            -canvas.width,
+            0,
+            canvas.width,
+            canvas.height
+          );
+          context.restore();
+        } else {
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        }
 
-    // Set canvas size to video size
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+        // ===== Overlay text =====
+        const currentTime = new Date().toLocaleString("id-ID");
+        const locationText =
+          formData.lokasi || locationData.Flokasi || "Lokasi tidak tersedia";
 
-    // Draw video frame (mirror for desktop)
-    if (!isMobile) {
-      context.save();
-      context.scale(-1, 1);
-      context.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-      context.restore();
-    } else {
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const fontSize = Math.max(14, canvas.width / 54);
+        context.font = `${fontSize}px Arial`;
+        context.textAlign = "left";
+        context.textBaseline = "bottom";
+        context.fillStyle = "white";
+
+        context.shadowColor = "rgba(0, 0, 0, 0.8)"; // warna bayangan
+        context.shadowBlur = 6; // seberapa lembut bayangan
+        context.shadowOffsetX = 2; // geser horizontal
+        context.shadowOffsetY = 2; // geser vertikal
+
+        const padding = 25;
+        const lineHeight = fontSize * 1.4;
+
+        const wrappedLocation = wrapText(
+          context,
+          locationText,
+          canvas.width - padding * 2
+        );
+
+        const lines = [...wrappedLocation, currentTime];
+        const startY = canvas.height - padding;
+
+        lines.forEach((line, index) => {
+          const y = startY - (lines.length - 1 - index) * lineHeight;
+          context.fillText(line, padding, y);
+        });
+
+        // ===== Save image =====
+        const imageData = canvas.toDataURL("image/jpeg", 0.8);
+        setCapturedImage(imageData);
+        stopCamera();
+        openPreview();
+      }
     }
-
-    // Add overlay text
-    const currentTime = new Date().toLocaleString("id-ID");
-    const locationText = formData.lokasi || locationData.Flokasi || "Lokasi tidak tersedia";
-
-    const fontSize = Math.max(16, canvas.width / 50);
-    context.font = `${fontSize}px Arial`;
-    context.textAlign = "left";
-    context.textBaseline = "bottom";
-    context.fillStyle = "white";
-    context.strokeStyle = "black";
-    context.lineWidth = 2;
-
-    const padding = 20;
-    const lineHeight = fontSize * 1.4;
-    const maxWidth = canvas.width - padding * 2;
-
-    const wrappedLocation = wrapText(context, locationText, maxWidth);
-    const lines = [...wrappedLocation, currentTime];
-    const startY = canvas.height - padding;
-
-    lines.forEach((line, index) => {
-      const y = startY - (lines.length - 1 - index) * lineHeight;
-      context.strokeText(line, padding, y);
-      context.fillText(line, padding, y);
-    });
-
-    // Save image
-    const imageData = canvas.toDataURL("image/jpeg", 0.85);
-    setCapturedImage(imageData);
-    stopCamera();
-    setPreviewModalOpen(true);
   }, [stopCamera, locationData.Flokasi, formData.lokasi, isMobile]);
 
   const retakePhoto = () => {
@@ -794,11 +793,13 @@ export const PresensiForm = () => {
 
     try {
       if (!capturedImage) {
-        throw new Error("Foto belum diambil. Harap ambil foto terlebih dahulu.");
+        throw new Error(
+          "Foto belum diambil. Harap ambil foto terlebih dahulu."
+        );
       }
 
       const submitFormData = new FormData();
-      
+
       submitFormData.append("id", formData.id.trim());
       submitFormData.append("nama", formData.nama.trim());
       submitFormData.append("departemen", formData.departemen.trim());
@@ -809,13 +810,16 @@ export const PresensiForm = () => {
       submitFormData.append("latitude", formData.latitude.trim());
       submitFormData.append("longitude", formData.longitude.trim());
       submitFormData.append("jam", formData.jam);
-      
       const deviceIdentity = await getDeviceIdentity();
       submitFormData.append("uuid", deviceIdentity.uuid);
       submitFormData.append("fingerprint", deviceIdentity.fingerprint);
+
       submitFormData.append("photoData", capturedImage);
 
-      console.log("Data form yang akan dikirim:", Object.fromEntries(submitFormData.entries()));
+      console.log(
+        "Data form yang akan dikirim:",
+        Object.fromEntries(submitFormData.entries())
+      );
 
       const response = await fetch(
         `https://script.google.com/macros/s/${API_KEY}/exec`,
@@ -829,14 +833,18 @@ export const PresensiForm = () => {
       console.log("Response status:", response.status);
 
       let result = { success: false, message: "" };
+      let rawText = "";
+
       try {
-        const rawText = await response.text();
-        console.log("Raw response:", rawText);
+        rawText = await response.text();
+        console.log("Raw text dari response:", rawText);
         result = JSON.parse(rawText);
       } catch (jsonError) {
-        console.warn("JSON parse failed, assuming success for 200 response");
+        console.warn(
+          "Gagal parsing JSON. Tapi response 200, kita anggap berhasil."
+        );
         result.success = true;
-        result.message = "Presensi berhasil";
+        result.message = "Presensi berhasil (parsed error)";
       }
 
       if (result.success) {
@@ -844,19 +852,25 @@ export const PresensiForm = () => {
           isOpen: true,
           type: "success",
           title: "Presensi Berhasil",
-          message: "Presensi berhasil dikirim!",
+          message: "Presensi berhasil!",
         });
         resetForm();
       } else {
-        throw new Error(result.message || "Gagal mengirim presensi");
+        throw new Error(result.message || "Gagal presensi. Coba lagi.");
       }
     } catch (error) {
-      console.error("Submit failed:", error);
+      console.error("Gagal mengirim data:", error);
+      let errorMessage = "Gagal mengirim data. Coba lagi nanti.";
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
       setNotification({
         isOpen: true,
         type: "error",
         title: "Gagal Submit",
-        message: error instanceof Error ? error.message : "Terjadi kesalahan saat mengirim data",
+        message: errorMessage,
       });
     } finally {
       setIsLoading(false);
@@ -865,7 +879,7 @@ export const PresensiForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-4">
+    <div className="min-h-screen bg-gradient-to-b from-background via-muted/50 to-background p-4 relative">
       {/* Loading Screen */}
       <LoadingScreen
         isOpen={isChecking || isLoading}
@@ -875,57 +889,75 @@ export const PresensiForm = () => {
       <div className="mx-auto max-w-2xl">
         {/* Header */}
         <div className="mb-8">
-          <div className="relative overflow-hidden rounded-2xl p-16 text-center text-white shadow-[var(--shadow-elegant)]">
-            <div className="absolute inset-0 bg-gradient-to-br from-honda-red via-honda-red-dark to-honda-red opacity-90"></div>
+          <div
+            className="relative overflow-hidden rounded-xl p-14 text-center text-white shadow-xl
+                  bg-[url('/bg.png')] bg-cover bg-center"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-honda-red/40 to-honda-red-dark/70"></div>
+
             <div className="relative z-10">
-              <h1 className="text-4xl font-bold tracking-wide mb-2">
+              <h1 className="text-3xl font-bold tracking-wide">
                 Form Presensi
               </h1>
-              <p className="text-honda-silver text-lg">
+              <p className="mt-2 text-honda-silver">
                 TRIO MOTOR - Honda Authorized Dealer
               </p>
             </div>
           </div>
         </div>
 
-        {/* Form Card */}
-        <Card className="border-0 bg-card/90 backdrop-blur-sm shadow-[var(--shadow-elegant)] rounded-2xl">
+        {/* Form */}
+        <Card className="border-0 bg-card/80 backdrop-blur-sm shadow-2xl">
           <div className="p-8 space-y-6">
             {/* ID Field */}
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-foreground">ID Karyawan</Label>
+              <label className="text-sm font-medium text-foreground">ID</label>
               <div className="flex gap-3">
                 <Input
                   value={formData.id}
                   onChange={(e) => handleIdChange(e.target.value)}
-                  placeholder="Masukkan ID karyawan"
-                  className="flex-1 transition-all duration-300 focus:ring-2 focus:ring-honda-red/50"
+                  placeholder="Masukkan ID"
+                  className="flex-1"
                   disabled={isLoading}
                 />
                 <Button
                   onClick={handleCheck}
                   disabled={isChecking || !formData.id.trim() || isLoading}
-                  variant={isIdChecked && !idNeedsRecheck ? "default" : "outline"}
-                  className={cn(
-                    "px-6 transition-all duration-300",
-                    isIdChecked && !idNeedsRecheck
-                      ? "bg-honda-red hover:bg-honda-red-dark"
-                      : "border-honda-red text-honda-red hover:bg-honda-red hover:text-white"
-                  )}
+                  variant={
+                    isLoading || isChecking || !formData.id.trim()
+                      ? "outline"
+                      : isIdChecked
+                      ? "default"
+                      : "outline"
+                  }
+                  className={`px-6
+                    ${
+                      isLoading || isChecking || !formData.id.trim()
+                        ? "px-6 text-red-600 border-red-600"
+                        : isIdChecked
+                        ? "px-6"
+                        : "px-6 text-red-600 border-red-600"
+                    }`}
                 >
-                  {isChecking ? "..." : isIdChecked && !idNeedsRecheck ? "Re-cek" : "Cek"}
+                  {isChecking
+                    ? "..."
+                    : isIdChecked && !idNeedsRecheck
+                    ? "Re-cek"
+                    : "Cek"}
                 </Button>
               </div>
             </div>
 
             {/* Nama */}
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-foreground">Nama</Label>
+              <label className="text-sm font-medium text-foreground">
+                Nama
+              </label>
               <Input
                 value={formData.nama || "Belum terisi"}
                 readOnly
                 className={cn(
-                  "bg-muted transition-all duration-300",
+                  "bg-muted",
                   !formData.nama && "text-muted-foreground"
                 )}
               />
@@ -933,18 +965,20 @@ export const PresensiForm = () => {
 
             {/* Departemen */}
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-foreground">Departemen</Label>
+              <label className="text-sm font-medium text-foreground">
+                Departemen
+              </label>
               <Input
                 value={formData.departemen || "Belum terisi"}
                 readOnly
                 className={cn(
-                  "bg-muted transition-all duration-300",
+                  "bg-muted",
                   !formData.departemen && "text-muted-foreground"
                 )}
               />
             </div>
 
-            {/* Hidden inputs for form data */}
+            {/* Hidden inputs for submission */}
             <input type="hidden" value={formData.uuid} />
             <input type="hidden" value={formData.fingerprint} />
             <input type="hidden" value={formData.urlMaps} />
@@ -954,91 +988,156 @@ export const PresensiForm = () => {
             {/* Tanggal & Jam */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm font-semibold text-foreground">Tanggal</Label>
+                <label className="text-sm font-medium text-foreground">
+                  Tanggal
+                </label>
                 <Input
                   value={formData.tanggal}
                   readOnly
+                  disabled={!isIdChecked || idNeedsRecheck}
                   className="bg-muted"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-semibold text-foreground">Jam</Label>
+                <label className="text-sm font-medium text-foreground">
+                  Jam
+                </label>
                 <Input
                   value={formData.jam}
                   readOnly
+                  disabled={!isIdChecked || idNeedsRecheck}
                   className="bg-muted"
                 />
               </div>
             </div>
 
-            {/* Presensi Type */}
-            <div className="space-y-4">
-              <Label className="text-sm font-semibold text-foreground">Keterangan Presensi</Label>
+            {/* Waktu Radio */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-foreground">
+                Keterangan
+              </Label>
               <RadioGroup
                 value={formData.presensi}
-                onValueChange={(value) => setFormData({ ...formData, presensi: value })}
-                className="grid grid-cols-2 gap-4"
-                disabled={!isIdChecked || idNeedsRecheck}
+                onValueChange={(value) => {
+                  setFormData({
+                    ...formData,
+                    presensi: value,
+                  });
+                }}
+                className="flex flex-wrap items-center justify-around"
+                disabled={isLoading || !isIdChecked || idNeedsRecheck}
               >
-                <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                  <RadioGroupItem value="Hadir" id="datang" />
-                  <Label htmlFor="datang" className="cursor-pointer">Datang</Label>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="Hadir"
+                    id="datang"
+                    disabled={!isIdChecked || idNeedsRecheck}
+                  />
+                  <Label
+                    htmlFor="datang"
+                    className={cn(
+                      !isIdChecked || idNeedsRecheck
+                        ? "text-muted-foreground"
+                        : ""
+                    )}
+                  >
+                    Datang
+                  </Label>
                 </div>
-                <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                  <RadioGroupItem value="Pulang" id="pulang" />
-                  <Label htmlFor="pulang" className="cursor-pointer">Pulang</Label>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="Pulang"
+                    id="pulang"
+                    disabled={!isIdChecked || idNeedsRecheck}
+                  />
+                  <Label
+                    htmlFor="pulang"
+                    className={cn(
+                      !isIdChecked || idNeedsRecheck
+                        ? "text-muted-foreground"
+                        : ""
+                    )}
+                  >
+                    Pulang
+                  </Label>
                 </div>
-                <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                  <RadioGroupItem value="Sakit" id="sakit" />
-                  <Label htmlFor="sakit" className="cursor-pointer">Sakit</Label>
+
+                <div className="w-px h-6 bg-border mx-2"></div>
+
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="Sakit"
+                    id="sakit"
+                    disabled={!isIdChecked || idNeedsRecheck}
+                  />
+                  <Label
+                    htmlFor="sakit"
+                    className={cn(
+                      !isIdChecked || idNeedsRecheck
+                        ? "text-muted-foreground"
+                        : ""
+                    )}
+                  >
+                    Sakit
+                  </Label>
                 </div>
-                <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                  <RadioGroupItem value="Izin" id="izin" />
-                  <Label htmlFor="izin" className="cursor-pointer">Izin</Label>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="Izin"
+                    id="izin"
+                    disabled={!isIdChecked || idNeedsRecheck}
+                  />
+                  <Label
+                    htmlFor="izin"
+                    className={cn(
+                      !isIdChecked || idNeedsRecheck
+                        ? "text-muted-foreground"
+                        : ""
+                    )}
+                  >
+                    Izin
+                  </Label>
                 </div>
               </RadioGroup>
             </div>
 
             {/* Camera Section */}
             <div className="space-y-3">
-              <Label className="text-sm font-semibold text-foreground">Foto Verifikasi</Label>
-              
-              {!capturedImage ? (
+              <label className="text-sm font-medium text-foreground">
+                Foto
+              </label>
+
+              {!capturedImage && (
                 <Button
                   onClick={startCamera}
                   variant="outline"
-                  className="w-full py-8 border-dashed border-2 hover:border-honda-red hover:bg-honda-red/5 transition-all duration-300"
+                  className="w-full py-6 border-dashed border-2"
                   disabled={!isCameraEnabled() || isLoading}
                 >
-                  <CameraIcon className="mr-2 h-6 w-6" />
-                  {!isIdChecked || idNeedsRecheck 
-                    ? "Lengkapi data terlebih dahulu" 
-                    : "Buka Kamera untuk Verifikasi"}
+                  <CameraIcon className="mr-2 h-5 w-5" />
+                  {!isIdChecked ? "Cek ID Terlebih Dahulu" : "Buka Kamera"}
                 </Button>
-              ) : (
+              )}
+
+              {capturedImage && (
                 <Button
-                  onClick={() => setPreviewModalOpen(true)}
+                  onClick={openPreview}
                   variant="outline"
-                  className="w-full py-8 border-dashed border-2 border-green-500 bg-green-50 hover:bg-green-100 transition-all duration-300"
+                  className="w-full py-6 border-dashed border-2"
+                  disabled={!isCameraEnabled() || isLoading}
                 >
-                  <Eye className="mr-2 h-6 w-6 text-green-600" />
-                  <span className="text-green-700">Lihat Foto yang Diambil</span>
+                  <Eye className="mr-2 h-5 w-5" />
+                  Lihat Foto
                 </Button>
               )}
             </div>
 
-            {/* Separator */}
-            <div className="h-px bg-gradient-to-r from-transparent via-honda-red to-transparent opacity-30"></div>
+            <div className="h-px w-full bg-red-700"></div>
 
             {/* Submit Button */}
             <Button
               onClick={handleSubmit}
-              className={cn(
-                "w-full py-6 text-lg font-semibold transition-all duration-300 shadow-lg",
-                isSubmitEnabled()
-                  ? "bg-honda-red hover:bg-honda-red-dark hover:shadow-[var(--shadow-glow)] transform hover:scale-[1.02]"
-                  : "bg-muted text-muted-foreground cursor-not-allowed"
-              )}
+              className="w-full py-6 text-lg font-medium bg-honda-red hover:bg-honda-red-dark shadow-lg disabled:opacity-50"
               disabled={!isSubmitEnabled() || isLoading}
             >
               {isLoading ? (
@@ -1047,107 +1146,118 @@ export const PresensiForm = () => {
                   Memproses...
                 </>
               ) : (
-                "Submit Presensi"
+                "Submit"
               )}
             </Button>
           </div>
         </Card>
 
-        {/* Hidden canvas for photo processing */}
+        {/* Hidden canvas for photo capture */}
         <canvas ref={canvasRef} className="hidden" />
       </div>
 
       {/* Camera Modal */}
-      <Dialog open={cameraModalOpen} onOpenChange={setCameraModalOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CameraIcon className="h-5 w-5 text-honda-red" />
-              Ambil Foto Presensi
-            </DialogTitle>
-            <DialogDescription>
-              Pastikan wajah Anda terlihat jelas dalam frame. Sistem akan mendeteksi wajah secara otomatis.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="relative rounded-xl overflow-hidden bg-black aspect-video">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className={cn(
-                  "w-full h-full object-cover",
-                  !isMobile && "transform scale-x-[-1]"
-                )}
-              />
-              <canvas
-                ref={canvasRef}
-                className="absolute top-0 left-0 w-full h-full pointer-events-none"
-              />
-
-              {/* Face detection status indicator */}
-              <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
-                <div className={cn(
-                  "px-4 py-2 rounded-full text-sm font-medium shadow-lg transition-all duration-300",
-                  faceDetected
-                    ? "bg-green-500 text-white"
-                    : "bg-red-500 text-white"
-                )}>
-                  {faceDetected ? "✓ Wajah Terdeteksi" : "⚠ Arahkan Wajah ke Kamera"}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <Button
-                onClick={capturePhoto}
-                disabled={!faceDetected}
-                className={cn(
-                  "flex-1 py-3 transition-all duration-300",
-                  faceDetected
-                    ? "bg-honda-red hover:bg-honda-red-dark"
-                    : "bg-muted text-muted-foreground cursor-not-allowed"
-                )}
-              >
-                <CameraIcon className="mr-2 h-5 w-5" />
-                {faceDetected ? "Ambil Foto" : "Tunggu Deteksi Wajah"}
-              </Button>
-              <Button onClick={stopCamera} variant="outline" className="px-6">
-                <X className="mr-2 h-4 w-4" />
-                Batal
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Preview Modal */}
-      <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
+      <Dialog
+        open={cameraModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            stopCamera();
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5 text-honda-red" />
-              Preview Foto Presensi
+              <CameraIcon className="h-5 w-5" />
+              Ambil Foto Presensi
             </DialogTitle>
             <DialogDescription>
-              Periksa foto Anda sebelum mengirim presensi.
+              Pastikan wajah Anda terlihat jelas dalam frame kamera
+            </DialogDescription>
+          </DialogHeader>
+
+          {cameraActive && (
+            <div className="space-y-4">
+              <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`w-full h-full object-cover ${
+                    !isMobile ? "transform scale-x-[-1]" : ""
+                  }`}
+                />
+                <canvas
+                  ref={canvasRef}
+                  className="absolute top-0 left-0 w-full h-full"
+                />
+
+                <div className="absolute top-2 left-1/2 -translate-x-1/2">
+                  {faceDetected ? (
+                    <span className="bg-green-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
+                      Wajah ditemukan
+                    </span>
+                  ) : (
+                    <span className="bg-red-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
+                      Arahkan wajah ke kamera
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-3 justify-center">
+                <Button
+                  onClick={capturePhoto}
+                  disabled={!faceDetected}
+                  className={`flex-1 max-w ${
+                    faceDetected
+                      ? "bg-honda-red hover:bg-honda-red-dark"
+                      : "bg-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  <CameraIcon className="mr-2 h-4 w-4" />
+                  Ambil Foto
+                </Button>
+                <Button onClick={stopCamera} variant="outline">
+                  <X className="mr-2 h-4 w-4" />
+                  Batal
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={previewModalOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            stopCamera();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CameraIcon className="h-5 w-5" />
+              Lihat Foto Presensi
+            </DialogTitle>
+            <DialogDescription>
+              Pastikan wajah Anda terlihat jelas dalam frame kamera
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="relative rounded-xl overflow-hidden bg-black">
-              {capturedImage && (
+            <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
+              <div className="relative rounded-lg overflow-hidden">
                 <img
                   src={capturedImage}
-                  alt="Foto Presensi"
-                  className="w-full h-auto max-h-[60vh] object-contain"
+                  alt="Captured"
+                  className="w-full h-full object-cover"
                 />
-              )}
+              </div>
             </div>
-
-            <div className="flex gap-3">
+            <div className="flex gap-3 justify-center">
               <Button
                 onClick={retakePhoto}
                 variant="outline"
@@ -1164,14 +1274,16 @@ export const PresensiForm = () => {
                 disabled={isLoading}
               >
                 <Trash2 className="h-4 w-4" />
+                Hapus
               </Button>
               <Button
                 onClick={() => setPreviewModalOpen(false)}
-                className="bg-honda-red hover:bg-honda-red-dark"
+                variant="outline"
+                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                 disabled={isLoading}
               >
                 <Check className="mr-2 h-4 w-4" />
-                Gunakan Foto
+                Simpan
               </Button>
             </div>
           </div>
@@ -1181,7 +1293,9 @@ export const PresensiForm = () => {
       {/* Notification Modal */}
       <Dialog
         open={notification.isOpen}
-        onOpenChange={(open) => setNotification(prev => ({ ...prev, isOpen: open }))}
+        onOpenChange={(open) =>
+          setNotification((prev) => ({ ...prev, isOpen: open }))
+        }
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -1193,19 +1307,20 @@ export const PresensiForm = () => {
               )}
               {notification.title}
             </DialogTitle>
-            <DialogDescription className="text-left whitespace-pre-wrap">
+            <DialogDescription className="text-left">
               {notification.message}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end mt-4">
             <Button
-              onClick={() => setNotification(prev => ({ ...prev, isOpen: false }))}
-              className={cn(
-                "transition-all duration-300",
+              onClick={() =>
+                setNotification((prev) => ({ ...prev, isOpen: false }))
+              }
+              className={
                 notification.type === "success"
                   ? "bg-green-600 hover:bg-green-700"
                   : "bg-red-600 hover:bg-red-700"
-              )}
+              }
             >
               OK
             </Button>
