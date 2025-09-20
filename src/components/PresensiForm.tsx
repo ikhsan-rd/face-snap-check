@@ -426,41 +426,39 @@ export const PresensiForm = () => {
         !cameraModalOpen ||
         !model ||
         !videoRef.current ||
+        !canvasRef.current ||
         videoRef.current.readyState < 2
       ) {
-        rafRef.current = requestAnimationFrame(loop);
+        if (running) rafId = requestAnimationFrame(loop);
         return;
       }
 
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      const ctx = canvas?.getContext("2d");
-      if (!canvas || !ctx) {
-        rafId = requestAnimationFrame(loop);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        if (running) rafId = requestAnimationFrame(loop);
         return;
       }
 
-      // set ukuran canvas sama dengan video
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      // Get the display size of video element
+      const rect = video.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
 
-      // gambar video (mirrored kalau desktop)
+      // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (!isMobile) {
-        ctx.save();
-        ctx.scale(-1, 1);
-        ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-        ctx.restore();
-      } else {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      }
 
       try {
         const predictions = await model.estimateFaces(video, false);
         const detected = predictions && predictions.length > 0;
         setFaceDetected(detected);
 
-        if (detected) {
+        if (detected && predictions.length > 0) {
+          // Calculate scale factors
+          const scaleX = canvas.width / video.videoWidth;
+          const scaleY = canvas.height / video.videoHeight;
+          
           ctx.strokeStyle = "rgba(34,197,94,0.9)";
           ctx.lineWidth = 3;
 
@@ -468,13 +466,21 @@ export const PresensiForm = () => {
             const [x1, y1] = pred.topLeft;
             const [x2, y2] = pred.bottomRight;
 
+            // Scale coordinates to canvas size
+            const scaledX1 = x1 * scaleX;
+            const scaledY1 = y1 * scaleY;
+            const scaledX2 = x2 * scaleX;
+            const scaledY2 = y2 * scaleY;
+
+            const width = scaledX2 - scaledX1;
+            const height = scaledY2 - scaledY1;
+
             if (!isMobile) {
-              // kalau mirror, koordinat X dibalik
-              const mirroredX1 = canvas.width - x2;
-              const mirroredX2 = canvas.width - x1;
-              ctx.strokeRect(mirroredX1, y1, mirroredX2 - mirroredX1, y2 - y1);
+              // For mirrored video, flip X coordinates
+              const mirroredX = canvas.width - scaledX2;
+              ctx.strokeRect(mirroredX, scaledY1, width, height);
             } else {
-              ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+              ctx.strokeRect(scaledX1, scaledY1, width, height);
             }
           });
         }
@@ -491,8 +497,7 @@ export const PresensiForm = () => {
 
     return () => {
       running = false;
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
+      if (rafId) cancelAnimationFrame(rafId);
     };
   }, [cameraModalOpen, model, capturedImage, isMobile]);
 
@@ -1133,7 +1138,21 @@ export const PresensiForm = () => {
         open={cameraModalOpen}
         onOpenChange={(open) => {
           if (!open) {
-            stopCamera();
+            setCameraModalOpen(false);
+            // Force cleanup when modal closes
+            if (streamRef.current) {
+              streamRef.current.getTracks().forEach((track) => track.stop());
+              streamRef.current = null;
+            }
+            if (videoRef.current) {
+              videoRef.current.srcObject = null;
+            }
+            if (rafRef.current) {
+              cancelAnimationFrame(rafRef.current);
+              rafRef.current = null;
+            }
+            setCameraActive(false);
+            setFaceDetected(false);
           }
         }}
       >
@@ -1149,43 +1168,47 @@ export const PresensiForm = () => {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="relative rounded-lg bg-white aspect-video">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                // className="w-full h-full object-cover"
-                className={`left-0 right-0 rounded-lg w-full h-full object-cover ${
-                  !isMobile ? "transform scale-x-[-1]" : ""
-                }`}
-              />
-              <canvas
-                ref={canvasRef}
-                className="absolute top-0 left-0 inset-0 w-full h-full"
-              />
+            <div className="relative rounded-lg bg-black mx-auto max-w-sm">
+              {/* Mobile-first responsive container with 4:5 aspect ratio */}
+              <div className="relative w-full" style={{ aspectRatio: '4/5' }}>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`absolute inset-0 w-full h-full object-cover rounded-lg ${
+                    !isMobile ? "transform scale-x-[-1]" : ""
+                  }`}
+                />
+                <canvas
+                  ref={canvasRef}
+                  className={`absolute inset-0 w-full h-full pointer-events-none ${
+                    !isMobile ? "transform scale-x-[-1]" : ""
+                  }`}
+                />
 
-              <div className="absolute top-2 left-1/2 -translate-x-1/2">
-                {faceDetected ? (
-                  <span className="bg-green-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
-                    Wajah ditemukan
-                  </span>
-                ) : (
-                  <span className="bg-red-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
-                    Arahkan wajah ke kamera
-                  </span>
-                )}
-              </div>
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
+                  {faceDetected ? (
+                    <span className="bg-green-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
+                      Wajah ditemukan
+                    </span>
+                  ) : (
+                    <span className="bg-red-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
+                      Arahkan wajah ke kamera
+                    </span>
+                  )}
+                </div>
 
-              <div className="absolute bottom-3 left-3 text-white text-xs pointer-events-none">
-                <div className="space-y-1">
-                  <div className="rounded text-shadow">
-                    {formData.lokasi ||
-                      locationData.Flokasi ||
-                      "Mendapatkan lokasi..."}
-                  </div>
-                  <div className="rounded text-shadow">
-                    {new Date().toLocaleString("id-ID")}
+                <div className="absolute bottom-3 left-3 text-white text-xs pointer-events-none z-10">
+                  <div className="space-y-1">
+                    <div className="bg-black/50 px-2 py-1 rounded text-shadow">
+                      {formData.lokasi ||
+                        locationData.Flokasi ||
+                        "Mendapatkan lokasi..."}
+                    </div>
+                    <div className="bg-black/50 px-2 py-1 rounded text-shadow">
+                      {new Date().toLocaleString("id-ID")}
+                    </div>
                   </div>
                 </div>
               </div>
