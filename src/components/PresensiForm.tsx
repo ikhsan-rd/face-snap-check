@@ -23,8 +23,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingScreen } from "./LoadingScreen";
+import { LoginModal } from "./LoginModal";
 import * as tf from "@tensorflow/tfjs";
 import * as blazeface from "@tensorflow-models/blazeface";
+import { useNavigate } from "react-router-dom";
 
 const API_KEY =
   "AKfycbyLHjveyhMYt7KGjxtSJov1u_nsszZzK0PKyZY-vuxi7C3mMBdMcqGII2vveWZV_jKdZw";
@@ -65,6 +67,9 @@ export const PresensiForm = () => {
   const detectionsRef = useRef<any[]>([]);
   const [model, setModel] = useState(null);
   const [faceDetected, setFaceDetected] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [showLoginAfterSubmit, setShowLoginAfterSubmit] = useState(false);
+  const navigate = useNavigate();
 
   const [locationData, setLocationData] = useState({
     Flatitude: "0",
@@ -829,6 +834,7 @@ export const PresensiForm = () => {
           title: "Presensi Berhasil",
           message: "Presensi berhasil!",
         });
+        setShowLoginAfterSubmit(true);
         resetForm();
       } else {
         throw new Error(result.message || "Gagal presensi. Coba lagi.");
@@ -1126,6 +1132,17 @@ export const PresensiForm = () => {
                 "Submit"
               )}
             </Button>
+
+            {/* Login Link */}
+            <div className="text-center mt-4">
+              <button
+                type="button"
+                onClick={() => setLoginModalOpen(true)}
+                className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+              >
+                Sudah punya akun? Login disini
+              </button>
+            </div>
           </div>
         </Card>
 
@@ -1369,21 +1386,57 @@ export const PresensiForm = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end mt-4">
-            <Button
-              onClick={() =>
-                setNotification((prev) => ({ ...prev, isOpen: false }))
-              }
-              className={
-                notification.type === "success"
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-red-600 hover:bg-red-700"
-              }
-            >
-              OK
-            </Button>
+            {showLoginAfterSubmit && notification.type === "success" ? (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setNotification((prev) => ({ ...prev, isOpen: false }));
+                    setShowLoginAfterSubmit(false);
+                  }}
+                >
+                  Tutup
+                </Button>
+                <Button
+                  onClick={() => {
+                    setNotification((prev) => ({ ...prev, isOpen: false }));
+                    setShowLoginAfterSubmit(false);
+                    setLoginModalOpen(true);
+                  }}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Login
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={() =>
+                  setNotification((prev) => ({ ...prev, isOpen: false }))
+                }
+                className={
+                  notification.type === "success"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-red-600 hover:bg-red-700"
+                }
+              >
+                OK
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        onLogin={(credentials) => {
+          console.log("Login attempt:", credentials);
+          setLoginModalOpen(false);
+          // For now, just navigate to dashboard
+          navigate("/dashboard");
+        }}
+      />
     </div>
   );
 };
