@@ -1156,27 +1156,56 @@ export const PresensiForm = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CameraIcon className="h-5 w-5" />
-              Ambil Foto Presensi
-            </DialogTitle>
-            <DialogDescription>
-              Pastikan wajah Anda terlihat jelas dalam frame kamera
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="w-full h-full max-w-none p-0 sm:max-w-2xl sm:h-auto sm:p-6">
+          {/* Mobile fullscreen header */}
+          <div className="block sm:hidden">
+            <div className="absolute top-0 left-0 right-0 z-50 bg-black/80 p-4">
+              <div className="flex items-center justify-between text-white">
+                <div>
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <CameraIcon className="h-5 w-5" />
+                    Ambil Foto Presensi
+                  </h2>
+                  <p className="text-sm text-white/80 mt-1">
+                    Pastikan wajah Anda terlihat jelas dalam frame
+                  </p>
+                </div>
+                <Button
+                  onClick={stopCamera}
+                  variant="ghost"
+                  size="sm"
+                  className="text-white hover:bg-white/20"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+          </div>
 
-          <div className="space-y-4">
-            <div className="relative rounded-lg bg-black mx-auto max-w-sm">
-              {/* Mobile-first responsive container with 4:5 aspect ratio */}
-              <div className="relative w-full" style={{ aspectRatio: '4/5' }}>
+          {/* Desktop header */}
+          <div className="hidden sm:block">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CameraIcon className="h-5 w-5" />
+                Ambil Foto Presensi
+              </DialogTitle>
+              <DialogDescription>
+                Pastikan wajah Anda terlihat jelas dalam frame kamera
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="h-full sm:h-auto space-y-4 sm:space-y-4">
+            {/* Camera container */}
+            <div className="relative bg-black mx-auto h-full sm:h-auto sm:max-w-sm sm:rounded-lg overflow-hidden">
+              {/* 4:5 aspect ratio container - fullscreen on mobile, constrained on desktop */}
+              <div className="relative w-full h-full sm:h-auto" style={{ aspectRatio: isMobile ? 'unset' : '4/5' }}>
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
                   muted
-                  className={`absolute inset-0 w-full h-full object-cover rounded-lg ${
+                  className={`absolute inset-0 w-full h-full object-cover sm:rounded-lg ${
                     !isMobile ? "transform scale-x-[-1]" : ""
                   }`}
                 />
@@ -1187,33 +1216,52 @@ export const PresensiForm = () => {
                   }`}
                 />
 
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
+                {/* Face detection status */}
+                <div className="absolute top-20 sm:top-2 left-1/2 -translate-x-1/2 z-40">
                   {faceDetected ? (
-                    <span className="bg-green-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
+                    <span className="bg-green-600 text-white text-sm sm:text-xs px-4 py-2 sm:px-3 sm:py-1 rounded-full shadow-md">
                       Wajah ditemukan
                     </span>
                   ) : (
-                    <span className="bg-red-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
+                    <span className="bg-red-600 text-white text-sm sm:text-xs px-4 py-2 sm:px-3 sm:py-1 rounded-full shadow-md">
                       Arahkan wajah ke kamera
                     </span>
                   )}
                 </div>
 
-                <div className="absolute bottom-3 left-3 text-white text-xs pointer-events-none z-10">
+                {/* Location and time overlay */}
+                <div className="absolute bottom-20 sm:bottom-3 left-3 text-white text-sm sm:text-xs pointer-events-none z-40">
                   <div className="space-y-1">
-                    <div className="bg-black/50 px-2 py-1 rounded text-shadow">
+                    <div className="bg-black/50 px-3 py-2 sm:px-2 sm:py-1 rounded text-shadow">
                       {formData.lokasi ||
                         locationData.Flokasi ||
                         "Mendapatkan lokasi..."}
                     </div>
-                    <div className="bg-black/50 px-2 py-1 rounded text-shadow">
+                    <div className="bg-black/50 px-3 py-2 sm:px-2 sm:py-1 rounded text-shadow">
                       {new Date().toLocaleString("id-ID")}
                     </div>
                   </div>
                 </div>
+
+                {/* Mobile capture button overlay */}
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 sm:hidden">
+                  <Button
+                    onClick={capturePhoto}
+                    disabled={!faceDetected || isLoading}
+                    className={`w-20 h-20 rounded-full ${
+                      faceDetected
+                        ? "bg-white text-black hover:bg-gray-100 border-4 border-white"
+                        : "bg-gray-400 text-gray-600 cursor-not-allowed border-4 border-gray-400"
+                    }`}
+                  >
+                    <CameraIcon className="w-10 h-10" />
+                  </Button>
+                </div>
               </div>
             </div>
-            <div className="flex gap-3 justify-center">
+
+            {/* Desktop controls */}
+            <div className="hidden sm:flex gap-3 justify-center">
               <Button
                 onClick={capturePhoto}
                 disabled={!faceDetected || isLoading}
