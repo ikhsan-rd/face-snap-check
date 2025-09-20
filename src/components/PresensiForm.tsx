@@ -23,7 +23,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingScreen } from "./LoadingScreen";
-import * as faceapi from "@vladmandic/face-api";
+import * as tf from "@tensorflow/tfjs";
+import * as blazeface from "@tensorflow-models/blazeface";
 
 const API_KEY =
   "AKfycbyLHjveyhMYt7KGjxtSJov1u_nsszZzK0PKyZY-vuxi7C3mMBdMcqGII2vveWZV_jKdZw";
@@ -49,19 +50,20 @@ export const PresensiForm = () => {
   const [idNeedsRecheck, setIdNeedsRecheck] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
+
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
 
-  // Camera and face detection refs
+  // Refs for media
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
-  const faceApiLoadedRef = useRef(false);
-  const detectionsRef = useRef<faceapi.FaceDetection[]>([]);
   const cameraStartedRef = useRef(false);
+  const detectionsRef = useRef<any[]>([]);
+  const [model, setModel] = useState(null);
   const [faceDetected, setFaceDetected] = useState(false);
 
   const [locationData, setLocationData] = useState({
@@ -95,43 +97,53 @@ export const PresensiForm = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Initialize camera when modal opens
+  useEffect(() => {
+    async function startCamera() {
+      try {
+        streamRef.current = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" },
+          audio: false,
+        });
+        if (videoRef.current) {
+          videoRef.current.srcObject = streamRef.current;
+          await videoRef.current.play();
+        }
+      } catch (err) {
+        console.error("camera init error", err);
+      }
+    }
+    if (cameraModalOpen) startCamera();
+    return () => {
+      if (streamRef.current)
+        streamRef.current.getTracks().forEach((t) => t.stop());
+    };
+  }, [cameraModalOpen]);
+
+  // Load BlazeFace model once
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      try {
+        await tf.ready();
+        const m = await blazeface.load({ maxFaces: 1 });
+        if (mounted) setModel(m);
+      } catch (err) {
+        console.error("model load error", err);
+      }
+    }
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Auto-set date
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
       tanggal: new Date().toLocaleDateString("en-CA"),
     }));
-  }, []);
-
-  // Initialize Face-API
-  useEffect(() => {
-    let mounted = true;
-    
-    const initFaceAPI = async () => {
-      try {
-        console.log("Initializing Face-API...");
-        
-        // Load models from CDN
-        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
-        
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-        ]);
-        
-        if (mounted) {
-          faceApiLoadedRef.current = true;
-          console.log("Face-API initialized successfully");
-        }
-      } catch (error) {
-        console.error("Failed to initialize Face-API:", error);
-      }
-    };
-
-    initFaceAPI();
-
-    return () => {
-      mounted = false;
-    };
   }, []);
 
   // Get UUID from localStorage or create new one
@@ -326,6 +338,7 @@ export const PresensiForm = () => {
 
       // 3. Generate unique code
       const deviceIdentity = await getDeviceIdentity();
+      // setUniqueCode(`${deviceIdentity.uuid}_${deviceIdentity.fingerprint}`);
 
       // 4. Update form data
       setFormData((prev) => ({
@@ -380,6 +393,10 @@ export const PresensiForm = () => {
 
   // Validation logic
   const isFormValid = () => {
+    // if (!isIdChecked) return false;
+
+    // if (!formData.presensi || formData.presensi.trim() === "") return false;
+
     return true;
   };
 
@@ -387,165 +404,102 @@ export const PresensiForm = () => {
   const isCameraEnabled = () => isFormValid();
   const isSubmitEnabled = () => isFormValid() && capturedImage;
 
-  // Drawing loop for face detection overlay
-  const drawLoop = useCallback(async () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
+  useEffect(() => {
+    let rafId: number;
+    let running = true;
 
-    if (!video || !canvas || !cameraActive || !faceApiLoadedRef.current) {
-      if (cameraActive) {
-        rafRef.current = requestAnimationFrame(drawLoop);
+    async function loop() {
+      if (
+        !cameraModalOpen ||
+        !model ||
+        !videoRef.current ||
+        videoRef.current.readyState < 2
+      ) {
+        rafRef.current = requestAnimationFrame(loop);
+        return;
       }
-      return;
-    }
 
-    // Wait for video to have dimensions
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
-    
-    if (!videoWidth || !videoHeight) {
-      rafRef.current = requestAnimationFrame(drawLoop);
-      return;
-    }
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext("2d");
+      if (!canvas || !ctx) {
+        rafId = requestAnimationFrame(loop);
+        return;
+      }
 
-    // Set canvas dimensions to match video
-    canvas.width = videoWidth;
-    canvas.height = videoHeight;
+      // set ukuran canvas sama dengan video
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      rafRef.current = requestAnimationFrame(drawLoop);
-      return;
-    }
+      // gambar video (mirrored kalau desktop)
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!isMobile) {
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+        ctx.restore();
+      } else {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      }
 
-    // Clear canvas
-    ctx.clearRect(0, 0, videoWidth, videoHeight);
+      try {
+        const predictions = await model.estimateFaces(video, false);
+        const detected = predictions && predictions.length > 0;
+        setFaceDetected(detected);
 
-    // Draw video frame with mirroring for front camera
-    if (isMobile) {
-      ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
-    } else {
-      // Mirror for desktop
-      ctx.save();
-      ctx.scale(-1, 1);
-      ctx.drawImage(video, -videoWidth, 0, videoWidth, videoHeight);
-      ctx.restore();
-    }
+        if (detected) {
+          ctx.strokeStyle = "rgba(34,197,94,0.9)";
+          ctx.lineWidth = 3;
 
-    // Process face detection
-    try {
-      const detections = await faceapi.detectAllFaces(
-        video,
-        new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
-      );
-      
-      detectionsRef.current = detections;
-      setFaceDetected(detections.length > 0);
+          predictions.forEach((pred) => {
+            const [x1, y1] = pred.topLeft;
+            const [x2, y2] = pred.bottomRight;
 
-      // Draw detection overlays
-      if (detections.length > 0) {
-        detections.forEach((detection) => {
-          try {
-            const box = detection.box;
-            
-            let x = box.x;
-            let y = box.y;
-            let width = box.width;
-            let height = box.height;
-
-            // Adjust for mirroring on desktop
             if (!isMobile) {
-              x = videoWidth - x - width;
+              // kalau mirror, koordinat X dibalik
+              const mirroredX1 = canvas.width - x2;
+              const mirroredX2 = canvas.width - x1;
+              ctx.strokeRect(mirroredX1, y1, mirroredX2 - mirroredX1, y2 - y1);
+            } else {
+              ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
             }
-
-            // Draw bounding box
-            ctx.strokeStyle = "#00ff00";
-            ctx.lineWidth = 3;
-            ctx.strokeRect(x, y, width, height);
-
-            // Draw label
-            ctx.fillStyle = "rgba(0, 255, 0, 0.8)";
-            ctx.fillRect(x, y - 30, 150, 25);
-            ctx.fillStyle = "white";
-            ctx.font = "16px Arial";
-            ctx.fillText("Wajah terdeteksi", x + 5, y - 10);
-          } catch (error) {
-            // Ignore drawing errors
-          }
-        });
+          });
+        }
+      } catch (err) {
+        console.error("face detection error:", err);
       }
-    } catch (error) {
-      // Ignore detection errors
-      console.debug("Face detection error:", error);
+
+      if (running) rafId = requestAnimationFrame(loop);
     }
 
-    // Draw timestamp and location overlay
-    try {
-      const currentTime = new Date().toLocaleString("id-ID");
-      const locationText = formData.lokasi || locationData.Flokasi || "Lokasi tidak tersedia";
-
-      ctx.fillStyle = "white";
-      ctx.font = "14px Arial";
-      ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
-      ctx.shadowBlur = 4;
-      ctx.shadowOffsetX = 1;
-      ctx.shadowOffsetY = 1;
-
-      // Draw location (wrapped if too long)
-      const maxWidth = videoWidth - 20;
-      const words = locationText.split(" ");
-      let line = "";
-      let lineHeight = 20;
-      let currentY = videoHeight - 50;
-
-      words.forEach((word, index) => {
-        const testLine = line + word + " ";
-        const metrics = ctx.measureText(testLine);
-        
-        if (metrics.width > maxWidth && line !== "") {
-          ctx.fillText(line, 10, currentY);
-          line = word + " ";
-          currentY += lineHeight;
-        } else {
-          line = testLine;
-        }
-        
-        if (index === words.length - 1) {
-          ctx.fillText(line, 10, currentY);
-        }
-      });
-
-      // Draw timestamp
-      ctx.fillText(currentTime, 10, videoHeight - 10);
-    } catch (error) {
-      // Ignore overlay drawing errors
+    if (cameraModalOpen && model && !capturedImage) {
+      rafId = requestAnimationFrame(loop);
     }
 
-    // Continue animation loop
-    rafRef.current = requestAnimationFrame(drawLoop);
-  }, [cameraActive, formData.lokasi, locationData.Flokasi, isMobile]);
+    return () => {
+      running = false;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
+  }, [cameraModalOpen, model, capturedImage, isMobile]);
 
   const startCamera = useCallback(async () => {
     if (cameraStartedRef.current) return;
 
     try {
       console.log("Starting camera...");
-      
+
       // Open modal first
       setCameraModalOpen(true);
       setLoadingMessage("Memulai kamera...");
-      
+
       // Check if getUserMedia is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("Camera access not supported");
       }
 
       const constraints: MediaStreamConstraints = {
-        video: {
-          width: { ideal: 640, max: 1280 },
-          height: { ideal: 480, max: 720 },
-          ...(isMobile && { facingMode: "user" })
-        }
+        video: { facingMode: isMobile ? "user" : "environment" },
       };
 
       console.log("Getting user media with constraints:", constraints);
@@ -553,47 +507,53 @@ export const PresensiForm = () => {
       streamRef.current = stream;
       console.log("Got media stream:", stream);
 
+      const track = stream.getVideoTracks()[0];
+      console.log("Track settings:", track.getSettings());
+      console.log("Track readyState:", track.readyState);
+
       // Wait a bit for modal to render
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       if (videoRef.current) {
         const video = videoRef.current;
         video.srcObject = stream;
         video.muted = true;
         video.playsInline = true;
-        
-        console.log("Video element configured, waiting for load...");
 
-        // Wait for video to be ready
+        console.log("Video element configured, waiting for metadata...");
+
         await new Promise<void>((resolve, reject) => {
           const timeoutId = setTimeout(() => {
             console.error("Video loading timeout");
             reject(new Error("Video loading timeout"));
           }, 10000);
 
-          const onCanPlay = () => {
-            console.log("Video can play");
+          const onLoaded = async () => {
+            console.log(
+              "Metadata loaded:",
+              video.videoWidth,
+              video.videoHeight
+            );
             clearTimeout(timeoutId);
-            video.removeEventListener("canplay", onCanPlay);
-            video.removeEventListener("error", onError);
-            resolve();
+            video.removeEventListener("loadedmetadata", onLoaded);
+
+            console.log("Video metadata:", video.videoWidth, video.videoHeight);
+            console.log(
+              "Video client size:",
+              video.clientWidth,
+              video.clientHeight
+            );
+            try {
+              await video.play();
+              console.log("Video is playing now");
+              resolve();
+            } catch (err) {
+              console.error("Video play failed:", err);
+              reject(err);
+            }
           };
 
-          const onError = (error: Event) => {
-            console.error("Video error:", error);
-            clearTimeout(timeoutId);
-            video.removeEventListener("canplay", onCanPlay);
-            video.removeEventListener("error", onError);
-            reject(new Error("Video failed to load"));
-          };
-
-          video.addEventListener("canplay", onCanPlay);
-          video.addEventListener("error", onError);
-          
-          // Try to play
-          video.play().catch((playError) => {
-            console.warn("Autoplay failed, but continuing:", playError);
-          });
+          video.addEventListener("loadedmetadata", onLoaded);
         });
       }
 
@@ -603,12 +563,6 @@ export const PresensiForm = () => {
       setLoadingMessage("");
 
       console.log("Camera started successfully");
-
-      // Start the drawing loop immediately
-      if (!rafRef.current) {
-        rafRef.current = requestAnimationFrame(drawLoop);
-      }
-
     } catch (error) {
       console.error("Error starting camera:", error);
       setNotification({
@@ -621,8 +575,9 @@ export const PresensiForm = () => {
       setCameraModalOpen(false);
       setLoadingMessage("");
     }
-  }, [drawLoop, isMobile]);
+  }, [isMobile]);
 
+  // Stop camera
   const stopCamera = useCallback(() => {
     // cancel animation
     if (rafRef.current) {
@@ -644,13 +599,14 @@ export const PresensiForm = () => {
     detectionsRef.current = [];
   }, []);
 
-  // make sure camera stops when modal closes from Dialog onOpenChange as well
+  // Auto-stop camera when modal closes
   useEffect(() => {
     if (!cameraModalOpen) {
       stopCamera();
     }
   }, [cameraModalOpen, stopCamera]);
 
+  // Open preview modal
   const openPreview = () => {
     setPreviewModalOpen(true);
   };
@@ -783,6 +739,7 @@ export const PresensiForm = () => {
       Flokasi: "",
       FmapUrl: "",
     });
+    // setUniqueCode("");
   };
 
   const handleSubmit = async () => {
@@ -977,6 +934,8 @@ export const PresensiForm = () => {
                 )}
               />
             </div>
+
+            {/* Hidden Location for Development - Remove for Production */}
 
             {/* Hidden inputs for submission */}
             <input type="hidden" value={formData.uuid} />
@@ -1176,55 +1135,67 @@ export const PresensiForm = () => {
             </DialogDescription>
           </DialogHeader>
 
-          {cameraActive && (
-            <div className="space-y-4">
-              <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={`w-full h-full object-cover ${
-                    !isMobile ? "transform scale-x-[-1]" : ""
-                  }`}
-                />
-                <canvas
-                  ref={canvasRef}
-                  className="absolute top-0 left-0 w-full h-full"
-                />
+          <div className="space-y-4">
+            <div className="relative rounded-lg bg-white aspect-video">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                // className="w-full h-full object-cover"
+                className={`left-0 right-0 rounded-lg w-full h-full object-cover ${
+                  !isMobile ? "transform scale-x-[-1]" : ""
+                }`}
+              />
+              <canvas
+                ref={canvasRef}
+                className="absolute top-0 left-0 inset-0 w-full h-full"
+              />
 
-                <div className="absolute top-2 left-1/2 -translate-x-1/2">
-                  {faceDetected ? (
-                    <span className="bg-green-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
-                      Wajah ditemukan
-                    </span>
-                  ) : (
-                    <span className="bg-red-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
-                      Arahkan wajah ke kamera
-                    </span>
-                  )}
+              <div className="absolute top-2 left-1/2 -translate-x-1/2">
+                {faceDetected ? (
+                  <span className="bg-green-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
+                    Wajah ditemukan
+                  </span>
+                ) : (
+                  <span className="bg-red-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
+                    Arahkan wajah ke kamera
+                  </span>
+                )}
+              </div>
+
+              <div className="absolute bottom-3 left-3 text-white text-xs pointer-events-none">
+                <div className="space-y-1">
+                  <div className="rounded text-shadow">
+                    {formData.lokasi ||
+                      locationData.Flokasi ||
+                      "Mendapatkan lokasi..."}
+                  </div>
+                  <div className="rounded text-shadow">
+                    {new Date().toLocaleString("id-ID")}
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-3 justify-center">
-                <Button
-                  onClick={capturePhoto}
-                  disabled={!faceDetected}
-                  className={`flex-1 max-w ${
-                    faceDetected
-                      ? "bg-honda-red hover:bg-honda-red-dark"
-                      : "bg-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  <CameraIcon className="mr-2 h-4 w-4" />
-                  Ambil Foto
-                </Button>
-                <Button onClick={stopCamera} variant="outline">
-                  <X className="mr-2 h-4 w-4" />
-                  Batal
-                </Button>
-              </div>
             </div>
-          )}
+            <div className="flex gap-3 justify-center">
+              <Button
+                onClick={capturePhoto}
+                disabled={!faceDetected || isLoading}
+                className={`flex-1 max-w ${
+                  faceDetected
+                    ? "bg-honda-red hover:bg-honda-red-dark"
+                    : "bg-gray-400 cursor-not-allowed"
+                }`}
+              >
+                <CameraIcon className="mr-2 h-4 w-4" />
+                Ambil Foto
+              </Button>
+              <Button onClick={stopCamera} variant="outline">
+                <X className="mr-2 h-4 w-4" />
+                Batal
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -1247,6 +1218,7 @@ export const PresensiForm = () => {
             </DialogDescription>
           </DialogHeader>
 
+          {/* {cameraActive && ( */}
           <div className="space-y-4">
             <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
               <div className="relative rounded-lg overflow-hidden">
@@ -1287,6 +1259,7 @@ export const PresensiForm = () => {
               </Button>
             </div>
           </div>
+          {/* )} */}
         </DialogContent>
       </Dialog>
 
