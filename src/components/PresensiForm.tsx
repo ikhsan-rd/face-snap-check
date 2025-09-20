@@ -115,8 +115,21 @@ export const PresensiForm = () => {
     }
     if (cameraModalOpen) startCamera();
     return () => {
-      if (streamRef.current)
-        streamRef.current.getTracks().forEach((t) => t.stop());
+      // Clean up camera stream when modal closes or component unmounts
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      // Cancel any running animation frame
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      setCameraActive(false);
+      setFaceDetected(false);
     };
   }, [cameraModalOpen]);
 
