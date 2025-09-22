@@ -69,6 +69,7 @@ export const PresensiForm = () => {
   const [faceDetected, setFaceDetected] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [showLoginAfterSubmit, setShowLoginAfterSubmit] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
 
   const [locationData, setLocationData] = useState({
@@ -1133,15 +1134,25 @@ export const PresensiForm = () => {
               )}
             </Button>
 
-            {/* Login Link */}
+            {/* Login/Dashboard Link */}
             <div className="text-center mt-4">
-              <button
-                type="button"
-                onClick={() => setLoginModalOpen(true)}
-                className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
-              >
-                Login
-              </button>
+              {isLoggedIn ? (
+                <button
+                  type="button"
+                  onClick={() => navigate("/dashboard")}
+                  className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+                >
+                  Dashboard
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setLoginModalOpen(true)}
+                  className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+                >
+                  Login
+                </button>
+              )}
             </div>
           </div>
         </Card>
@@ -1432,8 +1443,8 @@ export const PresensiForm = () => {
         onClose={() => setLoginModalOpen(false)}
         onLogin={(credentials) => {
           console.log("Login attempt:", credentials);
+          setIsLoggedIn(true);
           setLoginModalOpen(false);
-          // For now, just navigate to dashboard
           navigate("/dashboard");
         }}
       />
