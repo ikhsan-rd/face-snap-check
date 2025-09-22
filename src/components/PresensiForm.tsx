@@ -862,6 +862,30 @@ export const PresensiForm = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-muted/50 to-background p-4 relative">
+      {/* Header with Login/Dashboard Button */}
+      <div className="max-w-lg mx-auto mb-4">
+        <div className="flex justify-end">
+          {isLoggedIn ? (
+            <Button
+              variant="outline"
+              onClick={() => navigate("/dashboard")}
+              className="flex items-center gap-2"
+            >
+              <Eye className="h-4 w-4" />
+              Dashboard
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => setLoginModalOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Eye className="h-4 w-4" />
+              Login
+            </Button>
+          )}
+        </div>
+      </div>
       {/* Loading Screen */}
       <LoadingScreen
         isOpen={isChecking || isLoading}
@@ -1134,26 +1158,6 @@ export const PresensiForm = () => {
               )}
             </Button>
 
-            {/* Login/Dashboard Link */}
-            <div className="text-center mt-4">
-              {isLoggedIn ? (
-                <button
-                  type="button"
-                  onClick={() => navigate("/dashboard")}
-                  className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
-                >
-                  Dashboard
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setLoginModalOpen(true)}
-                  className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
-                >
-                  Login
-                </button>
-              )}
-            </div>
           </div>
         </Card>
 
