@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, MapPin, Clock } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Clock, ClipboardCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 // Mock data for presensi history
@@ -53,6 +53,14 @@ const Overview = () => {
   const navigate = useNavigate();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const totalPages = Math.ceil(mockPresensiData.length / itemsPerPage);
+  const paginatedData = mockPresensiData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -76,15 +84,21 @@ const Overview = () => {
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-6xl mx-auto">
-        <header className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Kembali
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Overview Presensi</h1>
-            <p className="text-muted-foreground">Riwayat presensi Anda</p>
+        <header className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Kembali
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Overview Presensi</h1>
+              <p className="text-muted-foreground">Riwayat presensi Anda</p>
+            </div>
           </div>
+          <Button onClick={() => navigate("/")} className="hidden sm:flex">
+            <ClipboardCheck className="h-4 w-4 mr-2" />
+            Presensi
+          </Button>
         </header>
 
         {/* Statistics Cards */}
@@ -128,40 +142,97 @@ const Overview = () => {
 
         {/* Presensi History */}
         <Card className="p-6">
-          <h2 className="text-lg font-semibold mb-4">Riwayat Presensi</h2>
-          <div className="space-y-4">
-            {mockPresensiData.map((item) => (
-              <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="text-center">
-                    <p className="font-medium">{new Date(item.tanggal).getDate()}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(item.tanggal).toLocaleDateString("id-ID", { month: "short" })}
-                    </p>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Riwayat Presensi</h2>
+            <Button onClick={() => navigate("/")} className="sm:hidden">
+              <ClipboardCheck className="h-4 w-4 mr-2" />
+              Presensi
+            </Button>
+          </div>
+          
+          {/* Desktop View */}
+          <div className="hidden md:block">
+            <div className="grid grid-cols-5 gap-4 pb-2 text-sm font-medium text-muted-foreground border-b mb-4">
+              <div>Tanggal</div>
+              <div>Status</div>
+              <div>Jam</div>
+              <div>Lokasi</div>
+              <div>Keterangan</div>
+            </div>
+            <div className="space-y-2">
+              {paginatedData.map((item) => (
+                <div key={item.id} className="grid grid-cols-5 gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="font-medium">
+                    {new Date(item.tanggal).toLocaleDateString("id-ID", { 
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric"
+                    })}
                   </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="font-medium">{item.presensi}</p>
-                      {getStatusBadge(item.status)}
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{item.jam}</span>
-                      </div>
-                      {item.lokasi !== "-" && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          <span className="truncate max-w-xs">{item.lokasi}</span>
-                        </div>
-                      )}
-                    </div>
+                  <div>{getStatusBadge(item.status)}</div>
+                  <div className="text-sm text-muted-foreground">{item.jam}</div>
+                  <div className="text-sm text-muted-foreground truncate">{item.lokasi}</div>
+                  <div className="text-sm">{item.presensi}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Mobile View */}
+          <div className="md:hidden space-y-3">
+            {paginatedData.map((item) => (
+              <div key={item.id} className="p-3 border rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="font-medium">
+                    {new Date(item.tanggal).toLocaleDateString("id-ID", { 
+                      day: "2-digit",
+                      month: "short"
+                    })}
                   </div>
+                  {getStatusBadge(item.status)}
+                </div>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    <span>{item.jam}</span>
+                  </div>
+                  {item.lokasi !== "-" && (
+                    <div className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      <span className="truncate">{item.lokasi}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Halaman {currentPage} dari {totalPages}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
     </div>
