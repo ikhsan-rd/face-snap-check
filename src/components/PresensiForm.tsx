@@ -1,4 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { isLoggedIn as checkIsLoggedIn, getCurrentUser, submitPresensi } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -70,7 +72,9 @@ export const PresensiForm = () => {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [showLoginAfterSubmit, setShowLoginAfterSubmit] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const [locationData, setLocationData] = useState({
     Flatitude: "0",
@@ -155,6 +159,12 @@ export const PresensiForm = () => {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  // Check login status on component mount
+  useEffect(() => {
+    setIsLoggedIn(checkIsLoggedIn());
+    setCurrentUser(getCurrentUser());
   }, []);
 
   // Auto-set date
@@ -1448,8 +1458,9 @@ export const PresensiForm = () => {
         onLogin={(credentials) => {
           console.log("Login attempt:", credentials);
           setIsLoggedIn(true);
+          setCurrentUser(getCurrentUser());
           setLoginModalOpen(false);
-          navigate("/dashboard");
+          // Don't navigate to dashboard from presensi form
         }}
       />
     </div>

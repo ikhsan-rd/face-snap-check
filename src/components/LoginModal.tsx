@@ -12,6 +12,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, EyeOff, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { cekUser, registerUser, loginUser } from "@/services/api";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -21,10 +23,11 @@ interface LoginModalProps {
 
 export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [credentials, setCredentials] = useState({
-    email: "",
+    id: "",
     password: "",
   });
   const [signupData, setSignupData] = useState({
@@ -32,37 +35,128 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
     password: "",
   });
   const [idExists, setIdExists] = useState<boolean | null>(null);
+  const [foundUserData, setFoundUserData] = useState<{ nama: string; departemen: string } | null>(null);
   const [isCheckingId, setIsCheckingId] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(credentials);
-    setCredentials({ email: "", password: "" });
-    navigate("/overview");
+    setIsLoggingIn(true);
+    
+    try {
+      const response = await loginUser(credentials.id, credentials.password);
+      
+      if (response.success) {
+        toast({
+          title: "Login Berhasil",
+          description: `Selamat datang, ${response.data?.nama}!`,
+        });
+        onLogin({ email: credentials.id, password: credentials.password });
+        setCredentials({ id: "", password: "" });
+        onClose();
+        navigate("/overview");
+      } else {
+        toast({
+          title: "Login Gagal",
+          description: response.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Terjadi kesalahan saat login",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   const handleCheckId = async () => {
-    if (!signupData.id) return;
-    
+    if (!signupData.id.trim()) {
+      toast({
+        title: "Error",
+        description: "Masukkan ID terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsCheckingId(true);
-    // Simulate ID check - replace with actual backend call later
-    setTimeout(() => {
-      // Mock: ID exists if it contains "admin" or "user"
-      const exists = signupData.id.toLowerCase().includes("admin") || signupData.id.toLowerCase().includes("user");
-      setIdExists(exists);
+    
+    try {
+      const response = await cekUser(signupData.id);
+      
+      if (response.success && response.data?.exists) {
+        setIdExists(true);
+        setFoundUserData({
+          nama: response.data.nama,
+          departemen: response.data.departemen
+        });
+        toast({
+          title: "ID Ditemukan",
+          description: `ID ${signupData.id} ditemukan untuk ${response.data.nama}`,
+        });
+      } else {
+        setIdExists(false);
+        setFoundUserData(null);
+        toast({
+          title: "ID Tidak Ditemukan",
+          description: "ID tidak terdaftar dalam sistem",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Terjadi kesalahan saat mengecek ID",
+        variant: "destructive",
+      });
+    } finally {
       setIsCheckingId(false);
-    }, 1000);
+    }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (idExists && signupData.password) {
-      // Save password to existing ID (mock)
-      console.log("Saving password for ID:", signupData.id);
-      setSignupData({ id: "", password: "" });
-      setIdExists(null);
-      navigate("/overview");
-      onClose();
+    setIsRegistering(true);
+    
+    try {
+      const response = await registerUser(signupData.id, signupData.password);
+      
+      if (response.success) {
+        toast({
+          title: "Registrasi Berhasil",
+          description: "Password berhasil disimpan",
+        });
+        
+        // Auto login after successful registration
+        const loginResponse = await loginUser(signupData.id, signupData.password);
+        if (loginResponse.success) {
+          onLogin({ email: signupData.id, password: signupData.password });
+          setSignupData({ id: "", password: "" });
+          setIdExists(null);
+          setFoundUserData(null);
+          onClose();
+          navigate("/overview");
+        }
+      } else {
+        toast({
+          title: "Registrasi Gagal",
+          description: response.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Terjadi kesalahan saat registrasi",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRegistering(false);
     }
   };
 
@@ -85,14 +179,14 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
           <TabsContent value="login">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="id">ID</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="nama@email.com"
-                  value={credentials.email}
+                  id="id"
+                  type="text"
+                  placeholder="Masukkan ID"
+                  value={credentials.id}
                   onChange={(e) =>
-                    setCredentials({ ...credentials, email: e.target.value })
+                    setCredentials({ ...credentials, id: e.target.value })
                   }
                   required
                 />
@@ -131,8 +225,8 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
                 <Button type="button" variant="outline" onClick={onClose} className="flex-1">
                   Batal
                 </Button>
-                <Button type="submit" className="flex-1">
-                  Login
+                <Button type="submit" className="flex-1" disabled={isLoggingIn}>
+                  {isLoggingIn ? "Login..." : "Login"}
                 </Button>
               </div>
             </form>
@@ -167,8 +261,13 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
                     )}
                   </Button>
                 </div>
-                {idExists === true && (
-                  <p className="text-sm text-green-600">✓ ID ditemukan! Silakan buat password.</p>
+                {idExists === true && foundUserData && (
+                  <div className="text-sm text-green-600 space-y-1">
+                    <p>✓ ID ditemukan!</p>
+                    <p>Nama: {foundUserData.nama}</p>
+                    <p>Departemen: {foundUserData.departemen}</p>
+                    <p>Silakan buat password.</p>
+                  </div>
                 )}
                 {idExists === false && (
                   <p className="text-sm text-red-600">✗ ID tidak ditemukan atau belum terdaftar.</p>
@@ -213,9 +312,9 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
                 <Button 
                   type="submit" 
                   className="flex-1"
-                  disabled={!idExists || !signupData.password}
+                  disabled={!idExists || !signupData.password || isRegistering}
                 >
-                  Simpan Password
+                  {isRegistering ? "Menyimpan..." : "Simpan Password"}
                 </Button>
               </div>
             </form>
