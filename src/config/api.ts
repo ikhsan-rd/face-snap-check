@@ -7,7 +7,10 @@
 // 4. Set Who has access: Anyone
 // 5. Click Deploy and copy the web app URL
 
-export const APPS_SCRIPT_URL = "YOUR_APPS_SCRIPT_URL_HERE";
+export const API_KEY =
+  "AKfycbxbhJMus4ZGtxV7tD_mLMpW0B_NotiZx_zvV-QfWPb9x2O3P7oaaHA2CIEEjKVz8fbJzA";
+
+export const APPS_SCRIPT_URL = `https://script.google.com/macros/s/${API_KEY}/exec`;
 
 // Example:
 // export const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx.../exec";

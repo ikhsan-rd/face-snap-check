@@ -34,7 +34,7 @@ export interface ApiResponse<T = any> {
   data?: T;
 }
 
-// Generate UUID for device identification
+// --- UUID Helpers ---
 function generateUUID(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
     const r = (Math.random() * 16) | 0;
@@ -43,7 +43,6 @@ function generateUUID(): string {
   });
 }
 
-// Get or create device UUID
 export function getDeviceUUID(): string {
   let uuid = localStorage.getItem("device_uuid");
   if (!uuid) {
@@ -53,31 +52,19 @@ export function getDeviceUUID(): string {
   return uuid;
 }
 
-// GET requests
+// --- GET Requests ---
 export async function cekUser(
   userId: string
 ): Promise<ApiResponse<{ exists: boolean } & User>> {
-  console.log("running api");
-
   const url = `${APPS_SCRIPT_URL}?action=cekUser&id=${encodeURIComponent(
     userId
   )}`;
 
   try {
-    const response = await fetch(url, { redirect: "follow" });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
-    }
-
-    const text = await response.text();
-    console.log("Raw response:", text);
-
-    // const data = await response.json();
-    const data = JSON.parse(text);
+    const response = await fetch(url);
+    const data = await response.json();
     return data;
   } catch (error) {
-    console.error("cekUser failed:", error);
     return {
       success: false,
       message: "Gagal mengecek user: " + (error as Error).message,
@@ -93,7 +80,7 @@ export async function fetchDashboard(
   const params = new URLSearchParams({
     action: "dashboard",
     id: userId,
-    uuid: uuid,
+    uuid,
   });
 
   if (bulanFilter) {
@@ -114,7 +101,7 @@ export async function fetchDashboard(
   }
 }
 
-// POST requests
+// --- POST Requests ---
 export async function registerUser(
   userId: string,
   password: string
@@ -185,13 +172,15 @@ export async function logoutUser(userId: string): Promise<ApiResponse> {
     });
     const data = await response.json();
 
-    if (data.success) {
-      localStorage.removeItem("user_data");
-      localStorage.removeItem("is_logged_in");
-    }
+    // Clear session meskipun API gagal
+    localStorage.removeItem("user_data");
+    localStorage.removeItem("is_logged_in");
 
     return data;
   } catch (error) {
+    localStorage.removeItem("user_data");
+    localStorage.removeItem("is_logged_in");
+
     return {
       success: false,
       message: "Gagal logout: " + (error as Error).message,
@@ -207,7 +196,7 @@ export async function submitPresensi(presensiData: {
   tanggal: string;
   jam: string;
   lokasi: string;
-  urlMaps?: string;
+  maps?: string;
   latitude?: number;
   longitude?: number;
   photoData: string;
@@ -228,7 +217,7 @@ export async function submitPresensi(presensiData: {
   formData.append("uuid", uuid);
   formData.append("photoData", presensiData.photoData);
 
-  if (presensiData.urlMaps) formData.append("urlMaps", presensiData.urlMaps);
+  if (presensiData.maps) formData.append("maps", presensiData.maps);
   if (presensiData.latitude !== undefined)
     formData.append("latitude", presensiData.latitude.toString());
   if (presensiData.longitude !== undefined)
@@ -253,7 +242,7 @@ export async function submitPresensi(presensiData: {
   }
 }
 
-// Helper functions for login state
+// --- Session Helpers ---
 export function isLoggedIn(): boolean {
   return localStorage.getItem("is_logged_in") === "true";
 }

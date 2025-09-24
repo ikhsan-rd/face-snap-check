@@ -1,15 +1,30 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface LoadingScreenProps {
   isOpen: boolean;
   message?: string;
 }
 
-export const LoadingScreen = ({ isOpen, message = "Loading..." }: LoadingScreenProps) => {
+export const LoadingScreen = ({
+  isOpen,
+  message = "Loading...",
+}: LoadingScreenProps) => {
   return (
     <Dialog open={isOpen} modal>
       <DialogContent className="sm:max-w-md border-none bg-card/95 backdrop-blur-md shadow-2xl">
+        <VisuallyHidden>
+          <DialogTitle>Memuat...</DialogTitle>
+          <DialogDescription>
+            Mohon tunggu, data sedang diproses.
+          </DialogDescription>
+        </VisuallyHidden>
         <div className="flex flex-col items-center justify-center py-8 px-4">
           <div className="relative">
             <div className="w-16 h-16 rounded-full border-4 border-honda-red/20 animate-pulse"></div>

@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom"; // +
 import {
   isLoggedIn as checkIsLoggedIn,
   getCurrentUser,
@@ -10,21 +11,21 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+// import {
+//   Dialog,
+//   DialogContent,
+//   DialogHeader,
+//   DialogTitle,
+//   DialogDescription,
+// } from "@/components/ui/dialog";
 import {
   Camera as CameraIcon,
   Check,
-  X,
+  // X,
   Trash2,
   RefreshCw,
-  AlertCircle,
-  CheckCircle2,
+  // AlertCircle,
+  // CheckCircle2,
   Eye,
   LogIn,
   Home,
@@ -32,12 +33,19 @@ import {
 import { cn } from "@/lib/utils";
 import { LoadingScreen } from "./LoadingScreen";
 import { LoginModal } from "./LoginModal";
-import * as tf from "@tensorflow/tfjs";
-import * as blazeface from "@tensorflow-models/blazeface";
-import { useNavigate } from "react-router-dom";
+import { CameraModal } from "./CameraModal";
+import { PhotoPreview } from "./PhotoPreview";
+import { NotificationDialog } from "./NotificationDialog";
+import { useCamera } from "@/hooks/useCamera";
+import { useLocation } from "@/hooks/useLocation";
+import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
+import { useUserData } from "@/hooks/useUserData";
+// import * as tf from "@tensorflow/tfjs";
+// import * as blazeface from "@tensorflow-models/blazeface";
+// import { useNavigate } from "react-router-dom";
 
-const API_KEY =
-  "AKfycbyLHjveyhMYt7KGjxtSJov1u_nsszZzK0PKyZY-vuxi7C3mMBdMcqGII2vveWZV_jKdZw";
+// const API_KEY =
+//   "AKfycbyLHjveyhMYt7KGjxtSJov1u_nsszZzK0PKyZY-vuxi7C3mMBdMcqGII2vveWZV_jKdZw";
 
 export const PresensiForm = () => {
   const [formData, setFormData] = useState({
@@ -55,39 +63,37 @@ export const PresensiForm = () => {
     fingerprint: "",
   });
 
-  const [isChecking, setIsChecking] = useState(false);
-  const [isIdChecked, setIsIdChecked] = useState(false);
-  const [idNeedsRecheck, setIdNeedsRecheck] = useState(false);
+  // const [isChecking, setIsChecking] = useState(false);
+  // const [isIdChecked, setIsIdChecked] = useState(false);
+  // const [idNeedsRecheck, setIdNeedsRecheck] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
 
-  const [cameraActive, setCameraActive] = useState(false);
-  const [cameraModalOpen, setCameraModalOpen] = useState(false);
+  // const [cameraActive, setCameraActive] = useState(false);
+  // const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  // const [capturedImage, setCapturedImage] = useState<string | null>(null);
 
   // Refs for media
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const cameraStartedRef = useRef(false);
-  const detectionsRef = useRef<any[]>([]);
-  const [model, setModel] = useState(null);
-  const [faceDetected, setFaceDetected] = useState(false);
+  // const videoRef = useRef<HTMLVideoElement | null>(null);
+  // const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  // const streamRef = useRef<MediaStream | null>(null);
+  // const rafRef = useRef<number | null>(null);
+  // const cameraStartedRef = useRef(false);
+  // const detectionsRef = useRef<any[]>([]);
+  // const [model, setModel] = useState(null);
+  // const [faceDetected, setFaceDetected] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [showLoginAfterSubmit, setShowLoginAfterSubmit] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const navigate = useNavigate();
-  const { toast } = useToast();
 
-  const [locationData, setLocationData] = useState({
-    Flatitude: "0",
-    Flongitude: "0",
-    Flokasi: "",
-    FmapUrl: "",
-  });
+  // const [locationData, setLocationData] = useState({
+  //   Flatitude: "0",
+  //   Flongitude: "0",
+  //   Flokasi: "",
+  //   FmapUrl: "",
+  // });
 
   const [notification, setNotification] = useState<{
     isOpen: boolean;
@@ -101,6 +107,35 @@ export const PresensiForm = () => {
     message: "",
   });
 
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // +
+  const {
+    cameraModalOpen,
+    setCameraModalOpen,
+    capturedImage,
+    faceDetected,
+    videoRef,
+    canvasRef,
+    capturePhoto,
+    deletePhoto,
+    retakePhoto,
+  } = useCamera();
+
+  // +
+  const { getLocationAndDecode } = useLocation();
+  const { getDeviceIdentity } = useDeviceIdentity();
+  const {
+    isChecking,
+    setIsChecking,
+    isIdChecked,
+    setIsIdChecked,
+    idNeedsRecheck,
+    setIdNeedsRecheck,
+    fetchUserData,
+  } = useUserData();
+
   // Real-time clock update
   useEffect(() => {
     const interval = setInterval(() => {
@@ -113,59 +148,65 @@ export const PresensiForm = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Initialize camera when modal opens
+  // +
   useEffect(() => {
-    async function startCamera() {
-      try {
-        streamRef.current = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
-          audio: false,
-        });
-        if (videoRef.current) {
-          videoRef.current.srcObject = streamRef.current;
-          await videoRef.current.play();
-        }
-      } catch (err) {
-        console.error("camera init error", err);
-      }
-    }
-    if (cameraModalOpen) startCamera();
-    return () => {
-      // Clean up camera stream when modal closes or component unmounts
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-      }
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-      // Cancel any running animation frame
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      setCameraActive(false);
-      setFaceDetected(false);
-    };
-  }, [cameraModalOpen]);
-
-  // Load BlazeFace model once
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      try {
-        await tf.ready();
-        const m = await blazeface.load({ maxFaces: 1 });
-        if (mounted) setModel(m);
-      } catch (err) {
-        console.error("model load error", err);
-      }
-    }
-    load();
-    return () => {
-      mounted = false;
-    };
+    setIsLoggedIn(checkIsLoggedIn());
+    setCurrentUser(getCurrentUser());
   }, []);
+
+  // Initialize camera when modal opens
+  // useEffect(() => {
+  //   async function startCamera() {
+  //     try {
+  //       streamRef.current = await navigator.mediaDevices.getUserMedia({
+  //         video: { facingMode: "user" },
+  //         audio: false,
+  //       });
+  //       if (videoRef.current) {
+  //         videoRef.current.srcObject = streamRef.current;
+  //         await videoRef.current.play();
+  //       }
+  //     } catch (err) {
+  //       console.error("camera init error", err);
+  //     }
+  //   }
+  //   if (cameraModalOpen) startCamera();
+  //   return () => {
+  //     // Clean up camera stream when modal closes or component unmounts
+  //     if (streamRef.current) {
+  //       streamRef.current.getTracks().forEach((track) => track.stop());
+  //       streamRef.current = null;
+  //     }
+  //     if (videoRef.current) {
+  //       videoRef.current.srcObject = null;
+  //     }
+  //     // Cancel any running animation frame
+  //     if (rafRef.current) {
+  //       cancelAnimationFrame(rafRef.current);
+  //       rafRef.current = null;
+  //     }
+  //     setCameraActive(false);
+  //     setFaceDetected(false);
+  //   };
+  // }, [cameraModalOpen]);
+
+  // // Load BlazeFace model once
+  // useEffect(() => {
+  //   let mounted = true;
+  //   async function load() {
+  //     try {
+  //       await tf.ready();
+  //       const m = await blazeface.load({ maxFaces: 1 });
+  //       if (mounted) setModel(m);
+  //     } catch (err) {
+  //       console.error("model load error", err);
+  //     }
+  //   }
+  //   load();
+  //   return () => {
+  //     mounted = false;
+  //   };
+  // }, []);
 
   // Check login status on component mount
   useEffect(() => {
@@ -182,161 +223,161 @@ export const PresensiForm = () => {
   }, []);
 
   // Get UUID from localStorage or create new one
-  const getUUID = () => {
-    let storedUUID = localStorage.getItem("deviceUUID");
-    if (!storedUUID) {
-      storedUUID = crypto.randomUUID();
-      localStorage.setItem("deviceUUID", storedUUID);
-    }
-    return storedUUID;
-  };
+  // const getUUID = () => {
+  //   let storedUUID = localStorage.getItem("deviceUUID");
+  //   if (!storedUUID) {
+  //     storedUUID = crypto.randomUUID();
+  //     localStorage.setItem("deviceUUID", storedUUID);
+  //   }
+  //   return storedUUID;
+  // };
 
   // Get device fingerprint (simplified version)
-  const getFingerprint = async () => {
-    try {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.textBaseline = "top";
-        ctx.font = "14px Arial";
-        ctx.fillText("Device fingerprint", 2, 2);
-      }
-      const canvasFingerprint = canvas.toDataURL();
+  // const getFingerprint = async () => {
+  //   try {
+  //     const canvas = document.createElement("canvas");
+  //     const ctx = canvas.getContext("2d");
+  //     if (ctx) {
+  //       ctx.textBaseline = "top";
+  //       ctx.font = "14px Arial";
+  //       ctx.fillText("Device fingerprint", 2, 2);
+  //     }
+  //     const canvasFingerprint = canvas.toDataURL();
 
-      const fingerprint = btoa(
-        navigator.userAgent +
-          navigator.language +
-          screen.width +
-          screen.height +
-          new Date().getTimezoneOffset() +
-          canvasFingerprint.slice(-50)
-      ).slice(0, 20);
+  //     const fingerprint = btoa(
+  //       navigator.userAgent +
+  //         navigator.language +
+  //         screen.width +
+  //         screen.height +
+  //         new Date().getTimezoneOffset() +
+  //         canvasFingerprint.slice(-50)
+  //     ).slice(0, 20);
 
-      return fingerprint;
-    } catch (error) {
-      console.error("Error generating fingerprint:", error);
-      return "unknown";
-    }
-  };
+  //     return fingerprint;
+  //   } catch (error) {
+  //     console.error("Error generating fingerprint:", error);
+  //     return "unknown";
+  //   }
+  // };
 
   // Generate device identity
-  const getDeviceIdentity = async () => {
-    const uuid = getUUID();
-    const fingerprint = await getFingerprint();
-    return { uuid, fingerprint };
-  };
+  // const getDeviceIdentity = async () => {
+  //   const uuid = getUUID();
+  //   const fingerprint = await getFingerprint();
+  //   return { uuid, fingerprint };
+  // };
 
   // Fetch user data from Google Apps Script
-  const fetchUserData = async (id: string) => {
-    try {
-      const response = await fetch(
-        `https://script.google.com/macros/s/${API_KEY}/exec?getUser=${id}`
-      );
+  // const fetchUserData = async (id: string) => {
+  //   try {
+  //     const response = await fetch(
+  //       `https://script.google.com/macros/s/${API_KEY}/exec?getUser=${id}`
+  //     );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
+  //     if (!response.ok) {
+  //       throw new Error(`HTTP error! Status: ${response.status}`);
+  //     }
 
-      const data = await response.json();
-      return data.exists
-        ? { id: data.id, nama: data.nama, departemen: data.departemen }
-        : null;
-    } catch (error) {
-      console.error("Failed to fetch user data:", error);
-      throw error;
-    }
-  };
+  //     const data = await response.json();
+  //     return data.exists
+  //       ? { id: data.id, nama: data.nama, departemen: data.departemen }
+  //       : null;
+  //   } catch (error) {
+  //     console.error("Failed to fetch user data:", error);
+  //     throw error;
+  //   }
+  // };
 
   // Get address from coordinates using Nominatim
-  const getAddressFromCoordinates = async (
-    latitude: number,
-    longitude: number
-  ) => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-      );
+  // const getAddressFromCoordinates = async (
+  //   latitude: number,
+  //   longitude: number
+  // ) => {
+  //   try {
+  //     const response = await fetch(
+  //       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+  //     );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
+  //     if (!response.ok) {
+  //       throw new Error(`HTTP error! Status: ${response.status}`);
+  //     }
 
-      const data = await response.json();
-      return data.display_name || "Unknown location";
-    } catch (error) {
-      console.error("Failed to get address:", error);
-      return "Error getting location";
-    }
-  };
+  //     const data = await response.json();
+  //     return data.display_name || "Unknown location";
+  //   } catch (error) {
+  //     console.error("Failed to get address:", error);
+  //     return "Error getting location";
+  //   }
+  // };
 
-  // Get location and decode address
-  const getLocationAndDecode = async () => {
-    if (!navigator.geolocation) {
-      throw new Error("Geolocation is not supported by this browser");
-    }
+  // // Get location and decode address
+  // const getLocationAndDecode = async () => {
+  //   if (!navigator.geolocation) {
+  //     throw new Error("Geolocation is not supported by this browser");
+  //   }
 
-    return new Promise<{
-      Flatitude: string;
-      Flongitude: string;
-      Flokasi: string;
-      FmapUrl: string;
-    }>((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          try {
-            const latitude = position.coords.latitude;
-            const longitude = position.coords.longitude;
-            const accuracy = position.coords.accuracy;
+  //   return new Promise<{
+  //     Flatitude: string;
+  //     Flongitude: string;
+  //     Flokasi: string;
+  //     FmapUrl: string;
+  //   }>((resolve, reject) => {
+  //     navigator.geolocation.getCurrentPosition(
+  //       async (position) => {
+  //         try {
+  //           const latitude = position.coords.latitude;
+  //           const longitude = position.coords.longitude;
+  //           const accuracy = position.coords.accuracy;
 
-            let Flokasi = await getAddressFromCoordinates(latitude, longitude);
+  //           let Flokasi = await getAddressFromCoordinates(latitude, longitude);
 
-            if (accuracy > 300) {
-              Flokasi = `⚠ (Lokasi mungkin tidak akurat) ⚠ --- ${Flokasi}`;
-            }
+  //           if (accuracy > 300) {
+  //             Flokasi = `⚠ (Lokasi mungkin tidak akurat) ⚠ --- ${Flokasi}`;
+  //           }
 
-            const FmapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+  //           const FmapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
 
-            const locationResult = {
-              Flatitude: latitude.toString(),
-              Flongitude: longitude.toString(),
-              Flokasi,
-              FmapUrl,
-            };
+  //           const locationResult = {
+  //             Flatitude: latitude.toString(),
+  //             Flongitude: longitude.toString(),
+  //             Flokasi,
+  //             FmapUrl,
+  //           };
 
-            setFormData((prev) => ({
-              ...prev,
-              latitude: locationResult.Flatitude,
-              longitude: locationResult.Flongitude,
-              lokasi: locationResult.Flokasi,
-              urlMaps: locationResult.FmapUrl,
-            }));
+  //           setFormData((prev) => ({
+  //             ...prev,
+  //             latitude: locationResult.Flatitude,
+  //             longitude: locationResult.Flongitude,
+  //             lokasi: locationResult.Flokasi,
+  //             urlMaps: locationResult.FmapUrl,
+  //           }));
 
-            resolve(locationResult);
-          } catch (error) {
-            reject(error);
-          }
-        },
-        (error) => {
-          let message = "";
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              message = "Location access denied by user";
-              break;
-            case error.POSITION_UNAVAILABLE:
-              message = "Location information unavailable";
-              break;
-            case error.TIMEOUT:
-              message = "Location request timeout";
-              break;
-            default:
-              message = "Unknown location error";
-          }
-          reject(new Error(message));
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    });
-  };
+  //           resolve(locationResult);
+  //         } catch (error) {
+  //           reject(error);
+  //         }
+  //       },
+  //       (error) => {
+  //         let message = "";
+  //         switch (error.code) {
+  //           case error.PERMISSION_DENIED:
+  //             message = "Location access denied by user";
+  //             break;
+  //           case error.POSITION_UNAVAILABLE:
+  //             message = "Location information unavailable";
+  //             break;
+  //           case error.TIMEOUT:
+  //             message = "Location request timeout";
+  //             break;
+  //           default:
+  //             message = "Unknown location error";
+  //         }
+  //         reject(new Error(message));
+  //       },
+  //       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  //     );
+  //   });
+  // };
 
   // Handle ID changes - mark as needing recheck
   const handleIdChange = (value: string) => {
@@ -350,10 +391,14 @@ export const PresensiForm = () => {
 
     setIsChecking(true);
 
+    console.log(formData.id);
+
     try {
       // 1. Fetch user data
       setLoadingMessage("Mendapatkan data");
       const userData = await fetchUserData(formData.id.trim());
+
+      console.log("Fetched user data:", userData);
 
       if (!userData) {
         setNotification({
@@ -383,16 +428,14 @@ export const PresensiForm = () => {
         departemen: userData.departemen,
         uuid: deviceIdentity.uuid,
         fingerprint: deviceIdentity.fingerprint,
+        //+
+        latitude: locationResult.Flatitude,
+        longitude: locationResult.Flongitude,
+        lokasi: locationResult.Flokasi,
+        urlMaps: locationResult.FmapUrl,
       }));
 
-      // Log development data to console
-      console.log("=== DEVELOPMENT DATA ===");
-      console.log("User Location:", locationResult.Flokasi);
-      console.log("Unique Code:", deviceIdentity);
-      console.log("Latitude:", locationResult.Flatitude);
-      console.log("Longitude:", locationResult.Flongitude);
-      console.log("Google Maps Link:", locationResult.FmapUrl);
-      console.log("=========================");
+      console.log("FormData in Handle Check:", formData);
 
       setIsIdChecked(true);
       setIdNeedsRecheck(false);
@@ -426,480 +469,533 @@ export const PresensiForm = () => {
     }
   };
 
-  // Validation logic
-  const isFormValid = () => {
-    // if (!isIdChecked) return false;
+  // useEffect(() => {
+  //   let rafId: number;
+  //   let running = true;
 
-    // if (!formData.presensi || formData.presensi.trim() === "") return false;
+  //   async function loop() {
+  //     if (!running) return; // <--- hentikan semua update kalau sudah stop
 
-    return true;
-  };
+  //     if (
+  //       !cameraModalOpen ||
+  //       !model ||
+  //       !videoRef.current ||
+  //       !canvasRef.current ||
+  //       videoRef.current.readyState < 2
+  //     ) {
+  //       if (running) rafId = requestAnimationFrame(loop);
+  //       return;
+  //     }
 
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const isCameraEnabled = () => isFormValid();
-  const isSubmitEnabled = () => isFormValid() && capturedImage;
+  //     const video = videoRef.current;
+  //     const canvas = canvasRef.current;
+  //     const ctx = canvas.getContext("2d");
+  //     if (!ctx) {
+  //       if (running) rafId = requestAnimationFrame(loop);
+  //       return;
+  //     }
 
-  useEffect(() => {
-    let rafId: number;
-    let running = true;
+  //     // Get the display size of video element
+  //     const rect = video.getBoundingClientRect();
+  //     canvas.width = rect.width;
+  //     canvas.height = rect.height;
 
-    async function loop() {
-      if (!running) return; // <--- hentikan semua update kalau sudah stop
+  //     // Clear canvas
+  //     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      if (
-        !cameraModalOpen ||
-        !model ||
-        !videoRef.current ||
-        !canvasRef.current ||
-        videoRef.current.readyState < 2
-      ) {
-        if (running) rafId = requestAnimationFrame(loop);
-        return;
-      }
+  //     try {
+  //       const predictions = await model.estimateFaces(video, false);
+  //       if (!running) return; // <--- jangan update state kalau sudah stop
 
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        if (running) rafId = requestAnimationFrame(loop);
-        return;
-      }
+  //       const detected = predictions && predictions.length > 0;
+  //       setFaceDetected(detected);
 
-      // Get the display size of video element
-      const rect = video.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
+  //       if (detected) {
+  //         // Calculate scale factors
+  //         const scaleX = canvas.width / video.videoWidth;
+  //         const scaleY = canvas.height / video.videoHeight;
 
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+  //         ctx.strokeStyle = "rgba(34,197,94,0.9)";
+  //         ctx.lineWidth = 3;
 
-      try {
-        const predictions = await model.estimateFaces(video, false);
-        if (!running) return; // <--- jangan update state kalau sudah stop
+  //         predictions.forEach((pred) => {
+  //           const [x1, y1] = pred.topLeft;
+  //           const [x2, y2] = pred.bottomRight;
 
-        const detected = predictions && predictions.length > 0;
-        setFaceDetected(detected);
+  //           // Scale coordinates to canvas size
+  //           const scaledX1 = x1 * scaleX;
+  //           const scaledY1 = y1 * scaleY;
+  //           const scaledX2 = x2 * scaleX;
+  //           const scaledY2 = y2 * scaleY;
 
-        if (detected) {
-          // Calculate scale factors
-          const scaleX = canvas.width / video.videoWidth;
-          const scaleY = canvas.height / video.videoHeight;
+  //           const width = scaledX2 - scaledX1;
+  //           const height = scaledY2 - scaledY1;
 
-          ctx.strokeStyle = "rgba(34,197,94,0.9)";
-          ctx.lineWidth = 3;
+  //           if (!isMobile) {
+  //             const mirroredX = canvas.width - scaledX2;
+  //             ctx.strokeRect(mirroredX, scaledY1, width, height);
+  //           } else {
+  //             ctx.strokeRect(scaledX1, scaledY1, width, height);
+  //           }
+  //         });
+  //       }
+  //     } catch (err) {
+  //       console.error("face detection error:", err);
+  //     }
 
-          predictions.forEach((pred) => {
-            const [x1, y1] = pred.topLeft;
-            const [x2, y2] = pred.bottomRight;
+  //     if (running) rafId = requestAnimationFrame(loop);
+  //   }
 
-            // Scale coordinates to canvas size
-            const scaledX1 = x1 * scaleX;
-            const scaledY1 = y1 * scaleY;
-            const scaledX2 = x2 * scaleX;
-            const scaledY2 = y2 * scaleY;
+  //   if (cameraModalOpen && model && !capturedImage) {
+  //     rafId = requestAnimationFrame(loop);
+  //   }
 
-            const width = scaledX2 - scaledX1;
-            const height = scaledY2 - scaledY1;
+  //   return () => {
+  //     running = false;
+  //     if (rafId) cancelAnimationFrame(rafId);
+  //   };
+  // }, [cameraModalOpen, model, capturedImage, isMobile]);
 
-            if (!isMobile) {
-              const mirroredX = canvas.width - scaledX2;
-              ctx.strokeRect(mirroredX, scaledY1, width, height);
-            } else {
-              ctx.strokeRect(scaledX1, scaledY1, width, height);
-            }
-          });
-        }
-      } catch (err) {
-        console.error("face detection error:", err);
-      }
+  // const startCamera = useCallback(async () => {
+  //   if (cameraStartedRef.current) return;
 
-      if (running) rafId = requestAnimationFrame(loop);
-    }
+  //   try {
+  //     console.log("Starting camera...");
+  //     setLoadingMessage("Memulai kamera...");
 
-    if (cameraModalOpen && model && !capturedImage) {
-      rafId = requestAnimationFrame(loop);
-    }
+  //     if (!navigator.mediaDevices?.getUserMedia) {
+  //       throw new Error("Camera access not supported");
+  //     }
 
-    return () => {
-      running = false;
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, [cameraModalOpen, model, capturedImage, isMobile]);
+  //     const constraints: MediaStreamConstraints = {
+  //       video: { facingMode: isMobile ? "user" : "environment" },
+  //     };
 
-  const startCamera = useCallback(async () => {
-    if (cameraStartedRef.current) return;
+  //     console.log("Getting user media with constraints:", constraints);
+  //     const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  //     streamRef.current = stream;
+  //     console.log("Got media stream:", stream);
 
-    try {
-      console.log("Starting camera...");
-      setLoadingMessage("Memulai kamera...");
+  //     // Wait a bit for modal to render
+  //     setCameraModalOpen(true);
 
-      if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error("Camera access not supported");
-      }
+  //     if (videoRef.current) {
+  //       const video = videoRef.current;
+  //       video.srcObject = stream;
+  //       video.muted = true;
+  //       video.playsInline = true;
 
-      const constraints: MediaStreamConstraints = {
-        video: { facingMode: isMobile ? "user" : "environment" },
-      };
+  //       await new Promise<void>((resolve, reject) => {
+  //         const timeoutId = setTimeout(() => {
+  //           reject(new Error("Video timeout"));
+  //         }, 10000);
 
-      console.log("Getting user media with constraints:", constraints);
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-      console.log("Got media stream:", stream);
+  //         const onLoaded = async () => {
+  //           console.log(
+  //             "Metadata loaded:",
+  //             video.videoWidth,
+  //             video.videoHeight
+  //           );
+  //           clearTimeout(timeoutId);
+  //           video.removeEventListener("loadedmetadata", onLoaded);
 
-      // Wait a bit for modal to render
-      setCameraModalOpen(true);
+  //           console.log("Video metadata:", video.videoWidth, video.videoHeight);
+  //           console.log(
+  //             "Video client size:",
+  //             video.clientWidth,
+  //             video.clientHeight
+  //           );
+  //           try {
+  //             await video.play();
+  //             console.log("Video is playing now");
+  //             resolve();
+  //           } catch (err) {
+  //             console.error("Video play failed:", err);
+  //             reject(err);
+  //           }
+  //         };
 
-      if (videoRef.current) {
-        const video = videoRef.current;
-        video.srcObject = stream;
-        video.muted = true;
-        video.playsInline = true;
+  //         video.addEventListener("loadedmetadata", onLoaded);
+  //       });
+  //     }
 
-        await new Promise<void>((resolve, reject) => {
-          const timeoutId = setTimeout(() => {
-            reject(new Error("Video timeout"));
-          }, 10000);
+  //     cameraStartedRef.current = true;
+  //     setCameraActive(true);
+  //     setFaceDetected(false);
+  //     setLoadingMessage("");
 
-          const onLoaded = async () => {
-            console.log(
-              "Metadata loaded:",
-              video.videoWidth,
-              video.videoHeight
-            );
-            clearTimeout(timeoutId);
-            video.removeEventListener("loadedmetadata", onLoaded);
+  //     console.log("Camera started successfully");
+  //   } catch (error) {
+  //     console.error("Error starting camera:", error);
+  //     setNotification({
+  //       isOpen: true,
+  //       type: "error",
+  //       title: "Kamera Tidak Dapat Diakses",
+  //       message:
+  //         "Tidak dapat mengakses kamera. Pastikan izin kamera sudah diberikan dan kamera tidak sedang digunakan aplikasi lain.",
+  //     });
+  //     setCameraModalOpen(false);
+  //     setLoadingMessage("");
+  //   }
+  // }, [isMobile]);
 
-            console.log("Video metadata:", video.videoWidth, video.videoHeight);
-            console.log(
-              "Video client size:",
-              video.clientWidth,
-              video.clientHeight
-            );
-            try {
-              await video.play();
-              console.log("Video is playing now");
-              resolve();
-            } catch (err) {
-              console.error("Video play failed:", err);
-              reject(err);
-            }
-          };
+  // // Stop camera
+  // const stopCamera = useCallback(() => {
+  //   console.log("Stopping camera...");
 
-          video.addEventListener("loadedmetadata", onLoaded);
-        });
-      }
+  //   if (rafRef.current) {
+  //     console.log("Cancelling animation frame:", rafRef.current);
+  //     cancelAnimationFrame(rafRef.current);
+  //     rafRef.current = null;
+  //   }
 
-      cameraStartedRef.current = true;
-      setCameraActive(true);
-      setFaceDetected(false);
-      setLoadingMessage("");
+  //   if (streamRef.current) {
+  //     const tracks = streamRef.current.getTracks();
+  //     console.log("Tracks before stop:", tracks);
 
-      console.log("Camera started successfully");
-    } catch (error) {
-      console.error("Error starting camera:", error);
-      setNotification({
-        isOpen: true,
-        type: "error",
-        title: "Kamera Tidak Dapat Diakses",
-        message:
-          "Tidak dapat mengakses kamera. Pastikan izin kamera sudah diberikan dan kamera tidak sedang digunakan aplikasi lain.",
-      });
-      setCameraModalOpen(false);
-      setLoadingMessage("");
-    }
-  }, [isMobile]);
+  //     tracks.forEach((t) => {
+  //       if (t.readyState === "live") {
+  //         console.log("Stopping track:", t.kind);
+  //         t.stop();
+  //       }
+  //     });
+  //     streamRef.current = null;
+  //   } else {
+  //     console.warn("⚠️ stopCamera called but no active stream");
+  //   }
 
-  // Stop camera
-  const stopCamera = useCallback(() => {
-    console.log("Stopping camera...");
+  //   if (videoRef.current) {
+  //     console.log("Stopping video element");
+  //     videoRef.current.pause();
+  //     videoRef.current.srcObject = null;
+  //     videoRef.current.load();
+  //   }
 
-    if (rafRef.current) {
-      console.log("Cancelling animation frame:", rafRef.current);
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
+  //   detectionsRef.current = [];
+  //   cameraStartedRef.current = false;
+  //   setCameraActive(false);
+  //   setFaceDetected(false);
+  //   console.log("Camera stopped");
+  // }, []);
 
-    if (streamRef.current) {
-      const tracks = streamRef.current.getTracks();
-      console.log("Tracks before stop:", tracks);
+  // // Auto-stop camera when modal closes
+  // useEffect(() => {
+  //   if (!cameraModalOpen) {
+  //     console.log("Camera modal closed");
+  //     stopCamera();
+  //   }
+  // }, [cameraModalOpen, stopCamera]);
 
-      tracks.forEach((t) => {
-        if (t.readyState === "live") {
-          console.log("Stopping track:", t.kind);
-          t.stop();
-        }
-      });
-      streamRef.current = null;
-    } else {
-      console.warn("⚠️ stopCamera called but no active stream");
-    }
+  // // Open preview modal
+  // const openPreview = () => {
+  //   setPreviewModalOpen(true);
+  // };
 
-    if (videoRef.current) {
-      console.log("Stopping video element");
-      videoRef.current.pause();
-      videoRef.current.srcObject = null;
-      videoRef.current.load();
-    }
+  // // Fungsi untuk membungkus teks agar setelah ambil foto
+  // function wrapText(
+  //   context: CanvasRenderingContext2D,
+  //   text: string,
+  //   maxWidth: number
+  // ) {
+  //   const words = text.split(" ");
+  //   const lines: string[] = [];
+  //   let line = "";
 
-    detectionsRef.current = [];
-    cameraStartedRef.current = false;
-    setCameraActive(false);
-    setFaceDetected(false);
-    console.log("Camera stopped");
-  }, []);
+  //   words.forEach((word) => {
+  //     const testLine = line + word + " ";
+  //     const metrics = context.measureText(testLine);
+  //     const testWidth = metrics.width;
+  //     if (testWidth > maxWidth && line !== "") {
+  //       lines.push(line.trim());
+  //       line = word + " ";
+  //     } else {
+  //       line = testLine;
+  //     }
+  //   });
+  //   lines.push(line.trim());
+  //   return lines;
+  // }
 
-  // Auto-stop camera when modal closes
-  useEffect(() => {
-    if (!cameraModalOpen) {
-      console.log("Camera modal closed");
-      stopCamera();
-    }
-  }, [cameraModalOpen, stopCamera]);
+  // const capturePhoto = useCallback(() => {
+  //   if (videoRef.current && canvasRef.current) {
+  //     const video = videoRef.current;
+  //     const canvas = canvasRef.current;
+  //     const context = canvas.getContext("2d");
 
-  // Open preview modal
-  const openPreview = () => {
-    setPreviewModalOpen(true);
-  };
+  //     if (context) {
+  //       canvas.width = video.videoWidth;
+  //       canvas.height = video.videoHeight;
 
-  // Fungsi untuk membungkus teks agar setelah ambil foto
-  function wrapText(
-    context: CanvasRenderingContext2D,
-    text: string,
-    maxWidth: number
-  ) {
-    const words = text.split(" ");
-    const lines: string[] = [];
-    let line = "";
+  //       // Mirror untuk desktop
+  //       if (!isMobile) {
+  //         context.save();
+  //         context.scale(-1, 1);
+  //         context.drawImage(
+  //           video,
+  //           -canvas.width,
+  //           0,
+  //           canvas.width,
+  //           canvas.height
+  //         );
+  //         context.restore();
+  //       } else {
+  //         context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  //       }
 
-    words.forEach((word) => {
-      const testLine = line + word + " ";
-      const metrics = context.measureText(testLine);
-      const testWidth = metrics.width;
-      if (testWidth > maxWidth && line !== "") {
-        lines.push(line.trim());
-        line = word + " ";
-      } else {
-        line = testLine;
-      }
-    });
-    lines.push(line.trim());
-    return lines;
-  }
+  //       // ===== Overlay text =====
+  //       const currentTime = new Date().toLocaleString("id-ID");
+  //       const locationText =
+  //         formData.lokasi || locationData.Flokasi || "Lokasi tidak tersedia";
 
-  const capturePhoto = useCallback(() => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const context = canvas.getContext("2d");
+  //       const fontSize = Math.max(14, canvas.width / 54);
+  //       context.font = `${fontSize}px Arial`;
+  //       context.textAlign = "left";
+  //       context.textBaseline = "bottom";
+  //       context.fillStyle = "white";
 
-      if (context) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+  //       context.shadowColor = "rgba(0, 0, 0, 0.8)"; // warna bayangan
+  //       context.shadowBlur = 6; // seberapa lembut bayangan
+  //       context.shadowOffsetX = 2; // geser horizontal
+  //       context.shadowOffsetY = 2; // geser vertikal
 
-        // Mirror untuk desktop
-        if (!isMobile) {
-          context.save();
-          context.scale(-1, 1);
-          context.drawImage(
-            video,
-            -canvas.width,
-            0,
-            canvas.width,
-            canvas.height
-          );
-          context.restore();
-        } else {
-          context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        }
+  //       const padding = 25;
+  //       const lineHeight = fontSize * 1.4;
 
-        // ===== Overlay text =====
-        const currentTime = new Date().toLocaleString("id-ID");
-        const locationText =
-          formData.lokasi || locationData.Flokasi || "Lokasi tidak tersedia";
+  //       const wrappedLocation = wrapText(
+  //         context,
+  //         locationText,
+  //         canvas.width - padding * 2
+  //       );
 
-        const fontSize = Math.max(14, canvas.width / 54);
-        context.font = `${fontSize}px Arial`;
-        context.textAlign = "left";
-        context.textBaseline = "bottom";
-        context.fillStyle = "white";
+  //       const lines = [...wrappedLocation, currentTime];
+  //       const startY = canvas.height - padding;
 
-        context.shadowColor = "rgba(0, 0, 0, 0.8)"; // warna bayangan
-        context.shadowBlur = 6; // seberapa lembut bayangan
-        context.shadowOffsetX = 2; // geser horizontal
-        context.shadowOffsetY = 2; // geser vertikal
+  //       lines.forEach((line, index) => {
+  //         const y = startY - (lines.length - 1 - index) * lineHeight;
+  //         context.fillText(line, padding, y);
+  //       });
 
-        const padding = 25;
-        const lineHeight = fontSize * 1.4;
+  //       // ===== Save image =====
+  //       const imageData = canvas.toDataURL("image/jpeg", 0.8);
+  //       setCapturedImage(imageData);
+  //       stopCamera();
+  //       openPreview();
+  //     }
+  //   }
+  // }, [stopCamera, locationData.Flokasi, formData.lokasi, isMobile]);
 
-        const wrappedLocation = wrapText(
-          context,
-          locationText,
-          canvas.width - padding * 2
-        );
+  // const retakePhoto = () => {
+  //   setPreviewModalOpen(false);
+  //   setCapturedImage(null);
+  //   startCamera();
+  // };
 
-        const lines = [...wrappedLocation, currentTime];
-        const startY = canvas.height - padding;
+  // const deletePhoto = () => {
+  //   setCapturedImage(null);
+  //   setPreviewModalOpen(false);
+  // };
 
-        lines.forEach((line, index) => {
-          const y = startY - (lines.length - 1 - index) * lineHeight;
-          context.fillText(line, padding, y);
-        });
+  // const resetForm = () => {
+  //   setFormData({
+  //     id: "",
+  //     nama: "",
+  //     departemen: "",
+  //     tanggal: new Date().toLocaleDateString("en-CA"),
+  //     jam: new Date().toLocaleTimeString("en-GB", { hour12: false }),
+  //     presensi: "",
+  //     longitude: "",
+  //     latitude: "",
+  //     lokasi: "",
+  //     urlMaps: "",
+  //     uuid: "",
+  //     fingerprint: "",
+  //   });
+  //   setIsIdChecked(false);
+  //   setIdNeedsRecheck(false);
+  //   setCapturedImage(null);
+  //   setLocationData({
+  //     Flatitude: "0",
+  //     Flongitude: "0",
+  //     Flokasi: "",
+  //     FmapUrl: "",
+  //   });
+  //   setUniqueCode("");
+  // };
 
-        // ===== Save image =====
-        const imageData = canvas.toDataURL("image/jpeg", 0.8);
-        setCapturedImage(imageData);
-        stopCamera();
-        openPreview();
-      }
-    }
-  }, [stopCamera, locationData.Flokasi, formData.lokasi, isMobile]);
-
-  const retakePhoto = () => {
-    setPreviewModalOpen(false);
-    setCapturedImage(null);
-    startCamera();
-  };
-
-  const deletePhoto = () => {
-    setCapturedImage(null);
-    setPreviewModalOpen(false);
-  };
-
-  const resetForm = () => {
-    setFormData({
-      id: "",
-      nama: "",
-      departemen: "",
-      tanggal: new Date().toLocaleDateString("en-CA"),
-      jam: new Date().toLocaleTimeString("en-GB", { hour12: false }),
-      presensi: "",
-      longitude: "",
-      latitude: "",
-      lokasi: "",
-      urlMaps: "",
-      uuid: "",
-      fingerprint: "",
-    });
-    setIsIdChecked(false);
-    setIdNeedsRecheck(false);
-    setCapturedImage(null);
-    setLocationData({
-      Flatitude: "0",
-      Flongitude: "0",
-      Flokasi: "",
-      FmapUrl: "",
-    });
-    // setUniqueCode("");
-  };
-
-  const cekConsole = () => {
-    console.log({
-      cameraActive,
-      cameraModalOpen,
-      faceDetected,
-      videoRef,
-      canvasRef,
-      streamRef,
-      rafRef,
-      cameraStartedRef,
-      detectionsRef,
-      model,
-    });
-  };
+  // const cekConsole = () => {
+  //   console.log({
+  //     cameraActive,
+  //     cameraModalOpen,
+  //     faceDetected,
+  //     videoRef,
+  //     canvasRef,
+  //     streamRef,
+  //     rafRef,
+  //     cameraStartedRef,
+  //     detectionsRef,
+  //     model,
+  //   });
+  // };
 
   const handleSubmit = async () => {
-    if (!isSubmitEnabled()) return;
+    // if (!isSubmitEnabled()) return;
+
+    if (!capturedImage) return; //+
 
     setIsLoading(true);
     setLoadingMessage("Mengirim data");
 
     try {
-      if (!capturedImage) {
-        throw new Error(
-          "Foto belum diambil. Harap ambil foto terlebih dahulu."
-        );
-      }
+      //+
+      const response = await submitPresensi({
+        id: formData.id,
+        nama: formData.nama,
+        departemen: formData.departemen,
+        presensi: formData.presensi,
+        tanggal: formData.tanggal,
+        jam: formData.jam,
+        lokasi: formData.lokasi,
+        urlMaps: formData.urlMaps,
+        latitude: parseFloat(formData.latitude),
+        longitude: parseFloat(formData.longitude),
+        photoData: capturedImage,
+        photoFileName: `${formData.id}-${formData.tanggal}-${formData.presensi}.png`,
+        fingerprint: formData.fingerprint,
+      });
 
-      const submitFormData = new FormData();
-
-      submitFormData.append("id", formData.id.trim());
-      submitFormData.append("nama", formData.nama.trim());
-      submitFormData.append("departemen", formData.departemen.trim());
-      submitFormData.append("tanggal", formData.tanggal);
-      submitFormData.append("presensi", formData.presensi.trim());
-      submitFormData.append("lokasi", formData.lokasi);
-      submitFormData.append("urlMaps", formData.urlMaps);
-      submitFormData.append("latitude", formData.latitude.trim());
-      submitFormData.append("longitude", formData.longitude.trim());
-      submitFormData.append("jam", formData.jam);
-      const deviceIdentity = await getDeviceIdentity();
-      submitFormData.append("uuid", deviceIdentity.uuid);
-      submitFormData.append("fingerprint", deviceIdentity.fingerprint);
-
-      submitFormData.append("photoData", capturedImage);
-
-      console.log(
-        "Data form yang akan dikirim:",
-        Object.fromEntries(submitFormData.entries())
-      );
-
-      const response = await fetch(
-        `https://script.google.com/macros/s/${API_KEY}/exec`,
-        {
-          method: "POST",
-          body: submitFormData,
-          redirect: "follow",
-        }
-      );
-
-      console.log("Response status:", response.status);
-
-      let result = { success: false, message: "" };
-      let rawText = "";
-
-      try {
-        rawText = await response.text();
-        console.log("Raw text dari response:", rawText);
-        result = JSON.parse(rawText);
-      } catch (jsonError) {
-        console.warn(
-          "Gagal parsing JSON. Tapi response 200, kita anggap berhasil."
-        );
-        result.success = true;
-        result.message = "Presensi berhasil (parsed error)";
-      }
-
-      if (result.success) {
+      if (response.success) {
         setNotification({
           isOpen: true,
           type: "success",
           title: "Presensi Berhasil",
-          message: "Presensi berhasil!",
+          message: "Data presensi berhasil disimpan!",
         });
-        setShowLoginAfterSubmit(true);
-        resetForm();
+
+        // if (!capturedImage) {
+        //   throw new Error(
+        //     "Foto belum diambil. Harap ambil foto terlebih dahulu."
+        //   );
+        // }
+
+        // const submitFormData = new FormData();
+
+        // submitFormData.append("id", formData.id.trim());
+        // submitFormData.append("nama", formData.nama.trim());
+        // submitFormData.append("departemen", formData.departemen.trim());
+        // submitFormData.append("tanggal", formData.tanggal);
+        // submitFormData.append("presensi", formData.presensi.trim());
+        // submitFormData.append("lokasi", formData.lokasi);
+        // submitFormData.append("urlMaps", formData.urlMaps);
+        // submitFormData.append("latitude", formData.latitude.trim());
+        // submitFormData.append("longitude", formData.longitude.trim());
+        // submitFormData.append("jam", formData.jam);
+        // const deviceIdentity = await getDeviceIdentity();
+        // submitFormData.append("uuid", deviceIdentity.uuid);
+        // submitFormData.append("fingerprint", deviceIdentity.fingerprint);
+
+        // submitFormData.append("photoData", capturedImage);
+
+        // console.log(
+        //   "Data form yang akan dikirim:",
+        //   Object.fromEntries(submitFormData.entries())
+        // );
+
+        // const response = await fetch(
+        //   `https://script.google.com/macros/s/${API_KEY}/exec`,
+        //   {
+        //     method: "POST",
+        //     body: submitFormData,
+        //     redirect: "follow",
+        //   }
+        // );
+
+        // console.log("Response status:", response.status);
+
+        // let result = { success: false, message: "" };
+        // let rawText = "";
+
+        // try {
+        //   rawText = await response.text();
+        //   console.log("Raw text dari response:", rawText);
+        //   result = JSON.parse(rawText);
+        // } catch (jsonError) {
+        //   console.warn(
+        //     "Gagal parsing JSON. Tapi response 200, kita anggap berhasil."
+        //   );
+        //   result.success = true;
+        //   result.message = "Presensi berhasil (parsed error)";
+        // }
+
+        // if (result.success) {
+        //   setNotification({
+        //     isOpen: true,
+        //     type: "success",
+        //     title: "Presensi Berhasil",
+        //     message: "Presensi berhasil!",
+        //   });
+        //   setShowLoginAfterSubmit(true);
+        //   resetForm();
+
+        // +
+        setFormData({
+          id: "",
+          nama: "",
+          departemen: "",
+          tanggal: new Date().toLocaleDateString("en-CA"),
+          jam: new Date().toLocaleTimeString("en-GB", { hour12: false }),
+          presensi: "",
+          longitude: "",
+          latitude: "",
+          lokasi: "",
+          urlMaps: "",
+          uuid: "",
+          fingerprint: "",
+        });
+        deletePhoto();
+        setIsIdChecked(false);
+        setIdNeedsRecheck(false);
       } else {
-        throw new Error(result.message || "Gagal presensi. Coba lagi.");
+        //+
+        setNotification({
+          isOpen: true,
+          type: "error",
+          title: "Presensi Gagal",
+          message: response.message || "Gagal menyimpan data presensi",
+        });
+
+        // throw new Error(result.message || "Gagal presensi. Coba lagi.");
       }
     } catch (error) {
       console.error("Gagal mengirim data:", error);
-      let errorMessage = "Gagal mengirim data. Coba lagi nanti.";
+      // let errorMessage = "Gagal mengirim data. Coba lagi nanti.";
 
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
+      // if (error instanceof Error) {
+      //   errorMessage = error.message;
+      // }
 
       setNotification({
         isOpen: true,
         type: "error",
         title: "Gagal Submit",
-        message: errorMessage,
+        // message: errorMessage,
+        message: "Terjadi kesalahan saat mengirim data",
       });
     } finally {
       setIsLoading(false);
       setLoadingMessage("");
     }
   };
+
+  // Validation logic
+  const isFormValid = () => {
+    // if (!isIdChecked) return false;
+    // if (!formData.presensi || formData.presensi.trim() === "") return false;
+    return true;
+  };
+
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isCameraEnabled = () => isFormValid();
+  const isSubmitEnabled = () => isFormValid() && capturedImage;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-muted/50 to-background p-4 relative">
@@ -1160,7 +1256,8 @@ export const PresensiForm = () => {
 
               {!capturedImage && (
                 <Button
-                  onClick={startCamera}
+                  // onClick={startCamera}
+                  onClick={() => setCameraModalOpen(true)}
                   variant="outline"
                   className="w-full py-6 border-dashed border-2"
                   disabled={!isCameraEnabled() || isLoading}
@@ -1172,7 +1269,8 @@ export const PresensiForm = () => {
 
               {capturedImage && (
                 <Button
-                  onClick={openPreview}
+                  // onClick={openPreview}
+                  onClick={() => setPreviewModalOpen(true)}
                   variant="outline"
                   className="w-full py-6 border-dashed border-2"
                   disabled={!isCameraEnabled() || isLoading}
@@ -1200,7 +1298,7 @@ export const PresensiForm = () => {
                 "Submit"
               )}
             </Button>
-            <Button onClick={cekConsole}>Cek</Button>
+            {/* <Button onClick={cekConsole}>Cek</Button> */}
           </div>
         </Card>
 
@@ -1209,27 +1307,28 @@ export const PresensiForm = () => {
       </div>
 
       {/* Camera Modal */}
-      <Dialog
+      <CameraModal
+        isOpen={cameraModalOpen}
+        onClose={() => setCameraModalOpen(false)}
+        videoRef={videoRef}
+        canvasRef={canvasRef}
+        faceDetected={faceDetected}
+        onCapture={capturePhoto}
+        location={formData.lokasi}
+        imageUrl={capturedImage || ""}
+        onDelete={deletePhoto}
+        onRetake={retakePhoto}
+      />
+
+      {/* <PhotoPreview
+        isOpen={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        imageUrl={capturedImage || ""}
+        onDelete={deletePhoto}
+        onRetake={retakePhoto}
+      /> */}
+      {/* <Dialog
         open={cameraModalOpen}
-        // onOpenChange={(open) => {
-        //   if (!open) {
-        //     setCameraModalOpen(false);
-        //     // Force cleanup when modal closes
-        //     if (streamRef.current) {
-        //       streamRef.current.getTracks().forEach((track) => track.stop());
-        //       streamRef.current = null;
-        //     }
-        //     if (videoRef.current) {
-        //       videoRef.current.srcObject = null;
-        //     }
-        //     if (rafRef.current) {
-        //       cancelAnimationFrame(rafRef.current);
-        //       rafRef.current = null;
-        //     }
-        //     setCameraActive(false);
-        //     setFaceDetected(false);
-        //   }
-        // }}
         onOpenChange={(open) => {
           if (!open) {
             setCameraModalOpen(false);
@@ -1314,9 +1413,17 @@ export const PresensiForm = () => {
             </div>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
 
-      <Dialog
+      {/* Preview Modal */}
+      <PhotoPreview
+        isOpen={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        imageUrl={capturedImage || ""}
+        onDelete={deletePhoto}
+        onRetake={retakePhoto}
+      />
+      {/* <Dialog
         open={previewModalOpen}
         onOpenChange={(open) => {
           if (open) {
@@ -1335,7 +1442,6 @@ export const PresensiForm = () => {
             </DialogDescription>
           </DialogHeader>
 
-          {/* {cameraActive && ( */}
           <div className="space-y-4">
             <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
               <div className="relative rounded-lg overflow-hidden">
@@ -1376,12 +1482,19 @@ export const PresensiForm = () => {
               </Button>
             </div>
           </div>
-          {/* )} */}
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
 
       {/* Notification Modal */}
-      <Dialog
+      <NotificationDialog
+        isOpen={notification.isOpen}
+        onClose={() => setNotification((prev) => ({ ...prev, isOpen: false }))}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+      />
+
+      {/* <Dialog
         open={notification.isOpen}
         onOpenChange={(open) =>
           setNotification((prev) => ({ ...prev, isOpen: open }))
@@ -1440,19 +1553,23 @@ export const PresensiForm = () => {
             )}
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
 
       {/* Login Modal */}
       <LoginModal
         isOpen={loginModalOpen}
         onClose={() => setLoginModalOpen(false)}
-        onLogin={(credentials) => {
-          console.log("Login attempt:", credentials);
+        // onLogin={(credentials) => {
+        onLogin={() => {
+          // console.log("Login attempt:", credentials);
           setIsLoggedIn(true);
           setCurrentUser(getCurrentUser());
-          setLoginModalOpen(false);
+          // setLoginModalOpen(false);
         }}
       />
     </div>
   );
 };
+// );
+// };
+// };
