@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom"; // +
 import {
@@ -418,7 +418,6 @@ export const PresensiForm = () => {
 
       // 3. Generate unique code
       const deviceIdentity = await getDeviceIdentity();
-      // setUniqueCode(`${deviceIdentity.uuid}_${deviceIdentity.fingerprint}`);
 
       // 4. Update form data
       setFormData((prev) => ({
@@ -843,7 +842,7 @@ export const PresensiForm = () => {
     if (!capturedImage) return; //+
 
     setIsLoading(true);
-    setLoadingMessage("Mengirim data");
+    setLoadingMessage("Mengirim data presensi...");
 
     try {
       //+
@@ -998,255 +997,61 @@ export const PresensiForm = () => {
   const isSubmitEnabled = () => isFormValid() && capturedImage;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-muted/50 to-background p-4 relative">
-      {/* Loading Screen */}
-      <LoadingScreen
-        isOpen={isChecking || isLoading}
-        message={loadingMessage}
-      />
-
-      <div className="mx-auto max-w-2xl">
-        {/* Header */}
-        <div className="mb-4">
-          <div
-            className="relative overflow-hidden rounded-xl p-14 text-center text-white shadow-xl
-                  bg-[url('/bg.png')] bg-cover bg-center"
+    <div className="min-h-screen bg-gradient-to-b from-primary/20 to-background p-4">
+      <div className="max-w-md mx-auto space-y-4">
+        {/* Header with Login/Dashboard Button */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-primary">Presensi Online</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (isLoggedIn) {
+                navigate("/dashboard");
+              } else {
+                setLoginModalOpen(true);
+              }
+            }}
+            className="flex items-center gap-2"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-honda-red/40 to-honda-red-dark/70"></div>
-
-            <div className="relative z-10">
-              <h1 className="text-3xl font-bold tracking-wide">
-                Form Presensi
-              </h1>
-              <p className="mt-2 text-honda-silver">
-                TRIO MOTOR - Honda Authorized Dealer
-              </p>
-            </div>
-          </div>
+            {isLoggedIn ? (
+              <>
+                <Home className="w-4 h-4" />
+                Dashboard
+              </>
+            ) : (
+              <>
+                <LogIn className="w-4 h-4" />
+                Login
+              </>
+            )}
+          </Button>
         </div>
 
-        {/* Form */}
-        <Card className="border-0 bg-card/80 backdrop-blur-sm shadow-2xl">
-          <div className="p-8 space-y-6">
-            {/* ID Field */}
-            <div className="space-y-2">
-              <div className="flex justify-start">
-                {isLoggedIn ? (
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate("/dashboard")}
-                    className="py-6 text-lg font-medium"
-                  >
-                    <Home className="h-4 w-4" />
-                    Dashboard
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={() => setLoginModalOpen(true)}
-                    className="py-6 text-lg font-medium"
-                  >
-                    <LogIn className="h-4 w-4" />
-                    Login
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            <div className="h-px w-full bg-red-700"></div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">ID</label>
-              <div className="flex gap-3">
-                <Input
-                  value={formData.id}
-                  onChange={(e) => handleIdChange(e.target.value)}
-                  placeholder="Masukkan ID"
-                  className="flex-1"
-                  disabled={isLoading}
-                />
-                <Button
-                  onClick={handleCheck}
-                  disabled={isChecking || !formData.id.trim() || isLoading}
-                  variant={
-                    isLoading || isChecking || !formData.id.trim()
-                      ? "outline"
-                      : isIdChecked
-                      ? "default"
-                      : "outline"
-                  }
-                  className={`px-6
-                    ${
-                      isLoading || isChecking || !formData.id.trim()
-                        ? "px-6 text-red-600 border-red-600"
-                        : isIdChecked
-                        ? "px-6"
-                        : "px-6 text-red-600 border-red-600"
-                    }`}
-                >
-                  {isChecking
-                    ? "..."
-                    : isIdChecked && !idNeedsRecheck
-                    ? "Re-cek"
-                    : "Cek"}
-                </Button>
-              </div>
-            </div>
-
-            {/* Nama */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
-                Nama
-              </label>
+        <Card className="p-6 space-y-4">
+          {/* ID Input */}
+          <div className="space-y-2">
+            <Label htmlFor="id">ID Pengguna *</Label>
+            <div className="flex gap-2">
               <Input
-                value={formData.nama || "Belum terisi"}
-                readOnly
+                id="id"
+                value={formData.id}
+                onChange={(e) => handleIdChange(e.target.value)}
+                placeholder="Masukkan ID Anda"
                 className={cn(
-                  "bg-muted",
-                  !formData.nama && "text-muted-foreground"
+                  isIdChecked && "border-green-500",
+                  idNeedsRecheck && "border-yellow-500"
                 )}
               />
-            </div>
-
-            {/* Departemen */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
-                Departemen
-              </label>
-              <Input
-                value={formData.departemen || "Belum terisi"}
-                readOnly
-                className={cn(
-                  "bg-muted",
-                  !formData.departemen && "text-muted-foreground"
-                )}
-              />
-            </div>
-
-            {/* Hidden Location for Development - Remove for Production */}
-
-            {/* Hidden inputs for submission */}
-            <input type="hidden" value={formData.uuid} />
-            <input type="hidden" value={formData.fingerprint} />
-            <input type="hidden" value={formData.urlMaps} />
-            <input type="hidden" value={formData.latitude} />
-            <input type="hidden" value={formData.longitude} />
-
-            {/* Tanggal & Jam */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">
-                  Tanggal
-                </label>
-                <Input
-                  value={formData.tanggal}
-                  readOnly
-                  disabled={!isIdChecked || idNeedsRecheck}
-                  className="bg-muted"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">
-                  Jam
-                </label>
-                <Input
-                  value={formData.jam}
-                  readOnly
-                  disabled={!isIdChecked || idNeedsRecheck}
-                  className="bg-muted"
-                />
-              </div>
-            </div>
-
-            {/* Waktu Radio */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium text-foreground">
-                Keterangan
-              </Label>
-              <RadioGroup
-                value={formData.presensi}
-                onValueChange={(value) => {
-                  setFormData({
-                    ...formData,
-                    presensi: value,
-                  });
-                }}
-                className="flex flex-wrap items-center justify-around"
-                disabled={isLoading || !isIdChecked || idNeedsRecheck}
+              <Button
+                onClick={handleCheck}
+                disabled={!formData.id || isChecking}
+                variant={isIdChecked ? "default" : "outline"}
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem
-                    value="Hadir"
-                    id="datang"
-                    disabled={!isIdChecked || idNeedsRecheck}
-                  />
-                  <Label
-                    htmlFor="datang"
-                    className={cn(
-                      !isIdChecked || idNeedsRecheck
-                        ? "text-muted-foreground"
-                        : ""
-                    )}
-                  >
-                    Datang
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem
-                    value="Pulang"
-                    id="pulang"
-                    disabled={!isIdChecked || idNeedsRecheck}
-                  />
-                  <Label
-                    htmlFor="pulang"
-                    className={cn(
-                      !isIdChecked || idNeedsRecheck
-                        ? "text-muted-foreground"
-                        : ""
-                    )}
-                  >
-                    Pulang
-                  </Label>
-                </div>
-
-                <div className="w-px h-6 bg-border mx-2"></div>
-
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem
-                    value="Sakit"
-                    id="sakit"
-                    disabled={!isIdChecked || idNeedsRecheck}
-                  />
-                  <Label
-                    htmlFor="sakit"
-                    className={cn(
-                      !isIdChecked || idNeedsRecheck
-                        ? "text-muted-foreground"
-                        : ""
-                    )}
-                  >
-                    Sakit
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem
-                    value="Izin"
-                    id="izin"
-                    disabled={!isIdChecked || idNeedsRecheck}
-                  />
-                  <Label
-                    htmlFor="izin"
-                    className={cn(
-                      !isIdChecked || idNeedsRecheck
-                        ? "text-muted-foreground"
-                        : ""
-                    )}
-                  >
-                    Izin
-                  </Label>
-                </div>
-              </RadioGroup>
+                {isChecking ? "..." : isIdChecked ? "✓" : "Cek"}
+              </Button>
             </div>
+          </div>
 
             {/* Camera Section */}
             <div className="space-y-3">
@@ -1280,14 +1085,28 @@ export const PresensiForm = () => {
                 </Button>
               )}
             </div>
+          )}
 
-            <div className="h-px w-full bg-red-700"></div>
+          {/* Date and Time */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Tanggal</Label>
+              <Input value={formData.tanggal} disabled />
+            </div>
+            <div>
+              <Label>Jam</Label>
+              <Input value={formData.jam} disabled />
+            </div>
+          </div>
 
-            {/* Submit Button */}
-            <Button
-              onClick={handleSubmit}
-              className="w-full py-6 text-lg font-medium bg-honda-red hover:bg-honda-red-dark shadow-lg disabled:opacity-50"
-              disabled={!isSubmitEnabled() || isLoading}
+          {/* Presensi Type */}
+          <div className="space-y-2">
+            <Label>Keterangan Presensi *</Label>
+            <RadioGroup
+              value={formData.presensi}
+              onValueChange={(value) =>
+                setFormData({ ...formData, presensi: value })
+              }
             >
               {isLoading ? (
                 <>
@@ -1373,17 +1192,50 @@ export const PresensiForm = () => {
                   </span>
                 )}
               </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="pulang" id="pulang" />
+                <Label htmlFor="pulang">Pulang</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="izin" id="izin" />
+                <Label htmlFor="izin">Izin</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="sakit" id="sakit" />
+                <Label htmlFor="sakit">Sakit</Label>
+              </div>
+            </RadioGroup>
+          </div>
 
-              <div className="absolute bottom-3 left-3 text-white text-xs pointer-events-none">
-                <div className="space-y-1">
-                  <div className="rounded text-shadow">
-                    {formData.lokasi ||
-                      locationData.Flokasi ||
-                      "Mendapatkan lokasi..."}
-                  </div>
-                  <div className="rounded text-shadow">
-                    {new Date().toLocaleString("id-ID")}
-                  </div>
+          {/* Camera Section 
+          <div className="space-y-2">
+            <Label>Foto Wajah *</Label>
+            {capturedImage ? (
+              <div className="space-y-2">
+                <div className="relative w-full h-48 bg-muted rounded-lg overflow-hidden">
+                  <img
+                    src={capturedImage}
+                    alt="Captured"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setPreviewModalOpen(true)}
+                    className="flex-1"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Preview
+                  </Button>
+                  <Button variant="outline" onClick={deletePhoto}>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Hapus
+                  </Button>
+                  <Button onClick={retakePhoto}>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Ulang
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1416,13 +1268,13 @@ export const PresensiForm = () => {
       </Dialog> */}
 
       {/* Preview Modal */}
-      <PhotoPreview
+      {/* <PhotoPreview
         isOpen={previewModalOpen}
         onClose={() => setPreviewModalOpen(false)}
         imageUrl={capturedImage || ""}
         onDelete={deletePhoto}
         onRetake={retakePhoto}
-      />
+      /> */}
       {/* <Dialog
         open={previewModalOpen}
         onOpenChange={(open) => {
@@ -1539,37 +1391,82 @@ export const PresensiForm = () => {
               </div>
             ) : (
               <Button
-                onClick={() =>
-                  setNotification((prev) => ({ ...prev, isOpen: false }))
-                }
-                className={
-                  notification.type === "success"
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-red-600 hover:bg-red-700"
-                }
+                onClick={() => setCameraModalOpen(true)}
+                disabled={!isCameraEnabled()}
+                variant="outline"
+                className="w-full h-12"
               >
-                OK
+                <CameraIcon className="w-4 h-4 mr-2" />
+                {isMobile ? "Buka Kamera" : "Akses Kamera"}
               </Button>
             )}
           </div>
         </DialogContent>
       </Dialog> */}
 
-      {/* Login Modal */}
+          {/* Submit Button */}
+          <Button
+            onClick={handleSubmit}
+            disabled={!isSubmitEnabled()}
+            className="w-full"
+            size="lg"
+          >
+            <Check className="w-4 h-4 mr-2" />
+            Kirim Presensi
+          </Button>
+        </Card>
+      </div>
+
+      {/* Modals */}
+      <CameraModal
+        isOpen={cameraModalOpen}
+        onClose={() => setCameraModalOpen(false)}
+        videoRef={videoRef}
+        canvasRef={canvasRef}
+        faceDetected={faceDetected}
+        onCapture={capturePhoto}
+      />
+
+      <PhotoPreview
+        isOpen={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        imageUrl={capturedImage || ""}
+        onDelete={deletePhoto}
+        onRetake={retakePhoto}
+      />
+
+      <NotificationDialog
+        isOpen={notification.isOpen}
+        onClose={() => setNotification((prev) => ({ ...prev, isOpen: false }))}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+      />
+
       <LoginModal
         isOpen={loginModalOpen}
         onClose={() => setLoginModalOpen(false)}
+<<<<<<< HEAD
         // onLogin={(credentials) => {
         onLogin={() => {
           // console.log("Login attempt:", credentials);
           setIsLoggedIn(true);
           setCurrentUser(getCurrentUser());
           // setLoginModalOpen(false);
+=======
+        onLogin={() => {
+          setIsLoggedIn(true);
+          setCurrentUser(getCurrentUser());
+>>>>>>> 7341fb9711cc7890e6c10d037bc0542c8879479e
         }}
       />
     </div>
   );
+<<<<<<< HEAD
 };
 // );
 // };
 // };
+=======
+};
+>>>>>>> 7341fb9711cc7890e6c10d037bc0542c8879479e
