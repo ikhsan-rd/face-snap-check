@@ -26,6 +26,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Eye,
+  LogIn,
+  Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingScreen } from "./LoadingScreen";
@@ -442,6 +444,8 @@ export const PresensiForm = () => {
     let running = true;
 
     async function loop() {
+      if (!running) return; // <--- hentikan semua update kalau sudah stop
+
       if (
         !cameraModalOpen ||
         !model ||
@@ -471,10 +475,12 @@ export const PresensiForm = () => {
 
       try {
         const predictions = await model.estimateFaces(video, false);
+        if (!running) return; // <--- jangan update state kalau sudah stop
+
         const detected = predictions && predictions.length > 0;
         setFaceDetected(detected);
 
-        if (detected && predictions.length > 0) {
+        if (detected) {
           // Calculate scale factors
           const scaleX = canvas.width / video.videoWidth;
           const scaleY = canvas.height / video.videoHeight;
@@ -496,7 +502,6 @@ export const PresensiForm = () => {
             const height = scaledY2 - scaledY1;
 
             if (!isMobile) {
-              // For mirrored video, flip X coordinates
               const mirroredX = canvas.width - scaledX2;
               ctx.strokeRect(mirroredX, scaledY1, width, height);
             } else {
@@ -526,13 +531,9 @@ export const PresensiForm = () => {
 
     try {
       console.log("Starting camera...");
-
-      // Open modal first
-      setCameraModalOpen(true);
       setLoadingMessage("Memulai kamera...");
 
-      // Check if getUserMedia is available
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error("Camera access not supported");
       }
 
@@ -545,12 +546,8 @@ export const PresensiForm = () => {
       streamRef.current = stream;
       console.log("Got media stream:", stream);
 
-      const track = stream.getVideoTracks()[0];
-      console.log("Track settings:", track.getSettings());
-      console.log("Track readyState:", track.readyState);
-
       // Wait a bit for modal to render
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      setCameraModalOpen(true);
 
       if (videoRef.current) {
         const video = videoRef.current;
@@ -558,12 +555,9 @@ export const PresensiForm = () => {
         video.muted = true;
         video.playsInline = true;
 
-        console.log("Video element configured, waiting for metadata...");
-
         await new Promise<void>((resolve, reject) => {
           const timeoutId = setTimeout(() => {
-            console.error("Video loading timeout");
-            reject(new Error("Video loading timeout"));
+            reject(new Error("Video timeout"));
           }, 10000);
 
           const onLoaded = async () => {
@@ -617,29 +611,47 @@ export const PresensiForm = () => {
 
   // Stop camera
   const stopCamera = useCallback(() => {
-    // cancel animation
+    console.log("Stopping camera...");
+
     if (rafRef.current) {
+      console.log("Cancelling animation frame:", rafRef.current);
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
 
-    // stop media tracks
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
+      const tracks = streamRef.current.getTracks();
+      console.log("Tracks before stop:", tracks);
+
+      tracks.forEach((t) => {
+        if (t.readyState === "live") {
+          console.log("Stopping track:", t.kind);
+          t.stop();
+        }
+      });
       streamRef.current = null;
+    } else {
+      console.warn("⚠️ stopCamera called but no active stream");
     }
 
-    // reset flags
+    if (videoRef.current) {
+      console.log("Stopping video element");
+      videoRef.current.pause();
+      videoRef.current.srcObject = null;
+      videoRef.current.load();
+    }
+
+    detectionsRef.current = [];
     cameraStartedRef.current = false;
     setCameraActive(false);
-    setCameraModalOpen(false);
     setFaceDetected(false);
-    detectionsRef.current = [];
+    console.log("Camera stopped");
   }, []);
 
   // Auto-stop camera when modal closes
   useEffect(() => {
     if (!cameraModalOpen) {
+      console.log("Camera modal closed");
       stopCamera();
     }
   }, [cameraModalOpen, stopCamera]);
@@ -780,6 +792,21 @@ export const PresensiForm = () => {
     // setUniqueCode("");
   };
 
+  const cekConsole = () => {
+    console.log({
+      cameraActive,
+      cameraModalOpen,
+      faceDetected,
+      videoRef,
+      canvasRef,
+      streamRef,
+      rafRef,
+      cameraStartedRef,
+      detectionsRef,
+      model,
+    });
+  };
+
   const handleSubmit = async () => {
     if (!isSubmitEnabled()) return;
 
@@ -876,30 +903,6 @@ export const PresensiForm = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-muted/50 to-background p-4 relative">
-      {/* Header with Login/Dashboard Button */}
-      <div className="max-w-lg mx-auto mb-4">
-        <div className="flex justify-end">
-          {isLoggedIn ? (
-            <Button
-              variant="outline"
-              onClick={() => navigate("/dashboard")}
-              className="flex items-center gap-2"
-            >
-              <Eye className="h-4 w-4" />
-              Dashboard
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              onClick={() => setLoginModalOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <Eye className="h-4 w-4" />
-              Login
-            </Button>
-          )}
-        </div>
-      </div>
       {/* Loading Screen */}
       <LoadingScreen
         isOpen={isChecking || isLoading}
@@ -908,7 +911,7 @@ export const PresensiForm = () => {
 
       <div className="mx-auto max-w-2xl">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-4">
           <div
             className="relative overflow-hidden rounded-xl p-14 text-center text-white shadow-xl
                   bg-[url('/bg.png')] bg-cover bg-center"
@@ -930,6 +933,32 @@ export const PresensiForm = () => {
         <Card className="border-0 bg-card/80 backdrop-blur-sm shadow-2xl">
           <div className="p-8 space-y-6">
             {/* ID Field */}
+            <div className="space-y-2">
+              <div className="flex justify-start">
+                {isLoggedIn ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate("/dashboard")}
+                    className="py-6 text-lg font-medium"
+                  >
+                    <Home className="h-4 w-4" />
+                    Dashboard
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => setLoginModalOpen(true)}
+                    className="py-6 text-lg font-medium"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    Login
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="h-px w-full bg-red-700"></div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">ID</label>
               <div className="flex gap-3">
@@ -1171,6 +1200,7 @@ export const PresensiForm = () => {
                 "Submit"
               )}
             </Button>
+            <Button onClick={cekConsole}>Cek</Button>
           </div>
         </Card>
 
@@ -1181,135 +1211,84 @@ export const PresensiForm = () => {
       {/* Camera Modal */}
       <Dialog
         open={cameraModalOpen}
+        // onOpenChange={(open) => {
+        //   if (!open) {
+        //     setCameraModalOpen(false);
+        //     // Force cleanup when modal closes
+        //     if (streamRef.current) {
+        //       streamRef.current.getTracks().forEach((track) => track.stop());
+        //       streamRef.current = null;
+        //     }
+        //     if (videoRef.current) {
+        //       videoRef.current.srcObject = null;
+        //     }
+        //     if (rafRef.current) {
+        //       cancelAnimationFrame(rafRef.current);
+        //       rafRef.current = null;
+        //     }
+        //     setCameraActive(false);
+        //     setFaceDetected(false);
+        //   }
+        // }}
         onOpenChange={(open) => {
           if (!open) {
             setCameraModalOpen(false);
-            // Force cleanup when modal closes
-            if (streamRef.current) {
-              streamRef.current.getTracks().forEach((track) => track.stop());
-              streamRef.current = null;
-            }
-            if (videoRef.current) {
-              videoRef.current.srcObject = null;
-            }
-            if (rafRef.current) {
-              cancelAnimationFrame(rafRef.current);
-              rafRef.current = null;
-            }
-            setCameraActive(false);
-            setFaceDetected(false);
           }
         }}
       >
-        <DialogContent className="w-full h-full max-w-none p-0 sm:max-w-2xl sm:h-auto sm:p-6">
-          {/* Mobile fullscreen header */}
-          <div className="block sm:hidden">
-            <div className="absolute top-0 left-0 right-0 z-50 bg-black/80 p-4">
-              <div className="flex items-center justify-between text-white">
-                <div>
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <CameraIcon className="h-5 w-5" />
-                    Ambil Foto Presensi
-                  </h2>
-                  <p className="text-sm text-white/80 mt-1">
-                    Pastikan wajah Anda terlihat jelas dalam frame
-                  </p>
-                </div>
-                <Button
-                  onClick={stopCamera}
-                  variant="ghost"
-                  size="sm"
-                  className="text-white hover:bg-white/20"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CameraIcon className="h-5 w-5" />
+              Ambil Foto Presensi
+            </DialogTitle>
+            <DialogDescription>
+              Pastikan wajah Anda terlihat jelas dalam frame kamera
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="relative rounded-lg bg-white aspect-video">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`left-0 right-0 rounded-lg w-full h-full object-cover ${
+                  !isMobile ? "transform scale-x-[-1]" : ""
+                }`}
+              />
+              <canvas
+                ref={canvasRef}
+                className="absolute top-0 left-0 inset-0 w-full h-full"
+              />
+
+              <div className="absolute top-2 left-1/2 -translate-x-1/2">
+                {faceDetected ? (
+                  <span className="bg-green-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
+                    Wajah ditemukan
+                  </span>
+                ) : (
+                  <span className="bg-red-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
+                    Arahkan wajah ke kamera
+                  </span>
+                )}
               </div>
-            </div>
-          </div>
 
-          {/* Desktop header */}
-          <div className="hidden sm:block">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <CameraIcon className="h-5 w-5" />
-                Ambil Foto Presensi
-              </DialogTitle>
-              <DialogDescription>
-                Pastikan wajah Anda terlihat jelas dalam frame kamera
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-
-          <div className="h-full sm:h-auto space-y-4 sm:space-y-4">
-            {/* Camera container */}
-            <div className="relative bg-black mx-auto h-full sm:h-auto sm:max-w-sm sm:rounded-lg overflow-hidden">
-              {/* 4:5 aspect ratio container - fullscreen on mobile, constrained on desktop */}
-              <div
-                className="relative w-full h-full sm:h-auto"
-                style={{ aspectRatio: isMobile ? "unset" : "4/5" }}
-              >
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={`absolute inset-0 w-full h-full object-cover sm:rounded-lg ${
-                    !isMobile ? "transform scale-x-[-1]" : ""
-                  }`}
-                />
-                <canvas
-                  ref={canvasRef}
-                  className={`absolute inset-0 w-full h-full pointer-events-none ${
-                    !isMobile ? "transform scale-x-[-1]" : ""
-                  }`}
-                />
-
-                {/* Face detection status */}
-                <div className="absolute top-20 sm:top-2 left-1/2 -translate-x-1/2 z-40">
-                  {faceDetected ? (
-                    <span className="bg-green-600 text-white text-sm sm:text-xs px-4 py-2 sm:px-3 sm:py-1 rounded-full shadow-md">
-                      Wajah ditemukan
-                    </span>
-                  ) : (
-                    <span className="bg-red-600 text-white text-sm sm:text-xs px-4 py-2 sm:px-3 sm:py-1 rounded-full shadow-md">
-                      Arahkan wajah ke kamera
-                    </span>
-                  )}
-                </div>
-
-                {/* Location and time overlay */}
-                <div className="absolute bottom-20 sm:bottom-3 left-3 text-white text-sm sm:text-xs pointer-events-none z-40">
-                  <div className="space-y-1">
-                    <div className="bg-black/50 px-3 py-2 sm:px-2 sm:py-1 rounded text-shadow">
-                      {formData.lokasi ||
-                        locationData.Flokasi ||
-                        "Mendapatkan lokasi..."}
-                    </div>
-                    <div className="bg-black/50 px-3 py-2 sm:px-2 sm:py-1 rounded text-shadow">
-                      {new Date().toLocaleString("id-ID")}
-                    </div>
+              <div className="absolute bottom-3 left-3 text-white text-xs pointer-events-none">
+                <div className="space-y-1">
+                  <div className="rounded text-shadow">
+                    {formData.lokasi ||
+                      locationData.Flokasi ||
+                      "Mendapatkan lokasi..."}
+                  </div>
+                  <div className="rounded text-shadow">
+                    {new Date().toLocaleString("id-ID")}
                   </div>
                 </div>
-
-                {/* Mobile capture button overlay */}
-                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 sm:hidden">
-                  <Button
-                    onClick={capturePhoto}
-                    disabled={!faceDetected || isLoading}
-                    className={`w-20 h-20 rounded-full ${
-                      faceDetected
-                        ? "bg-white text-black hover:bg-gray-100 border-4 border-white"
-                        : "bg-gray-400 text-gray-600 cursor-not-allowed border-4 border-gray-400"
-                    }`}
-                  >
-                    <CameraIcon className="w-10 h-10" />
-                  </Button>
-                </div>
               </div>
             </div>
-
-            {/* Desktop controls */}
-            <div className="hidden sm:flex gap-3 justify-center">
+            <div className="flex gap-3 justify-center">
               <Button
                 onClick={capturePhoto}
                 disabled={!faceDetected || isLoading}
@@ -1322,10 +1301,16 @@ export const PresensiForm = () => {
                 <CameraIcon className="mr-2 h-4 w-4" />
                 Ambil Foto
               </Button>
-              <Button onClick={stopCamera} variant="outline">
+              <Button
+                onClick={() => {
+                  setCameraModalOpen(false);
+                }}
+                variant="outline"
+              >
                 <X className="mr-2 h-4 w-4" />
                 Batal
               </Button>
+              <Button onClick={cekConsole}>Cek</Button>
             </div>
           </div>
         </DialogContent>
@@ -1335,7 +1320,7 @@ export const PresensiForm = () => {
         open={previewModalOpen}
         onOpenChange={(open) => {
           if (open) {
-            stopCamera();
+            setCameraModalOpen(false);
           }
         }}
       >
@@ -1466,7 +1451,6 @@ export const PresensiForm = () => {
           setIsLoggedIn(true);
           setCurrentUser(getCurrentUser());
           setLoginModalOpen(false);
-          // Don't navigate to dashboard from presensi form
         }}
       />
     </div>
