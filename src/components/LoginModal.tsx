@@ -12,8 +12,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, EyeOff, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
 import { cekUser, registerUser, loginUser } from "@/services/api";
+import { LoadingScreen } from "./LoadingScreen";
+import { NotificationDialog } from "./NotificationDialog";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -23,7 +24,6 @@ interface LoginModalProps {
 
 export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [credentials, setCredentials] = useState({
@@ -39,6 +39,17 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
   const [isCheckingId, setIsCheckingId] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    type: "success" | "error";
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    type: "success",
+    title: "",
+    message: "",
+  });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,26 +59,30 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
       const response = await loginUser(credentials.id, credentials.password);
       
       if (response.success) {
-        toast({
+        setNotification({
+          isOpen: true,
+          type: "success",
           title: "Login Berhasil",
-          description: `Selamat datang, ${response.data?.nama}!`,
+          message: `Selamat datang, ${response.data?.nama}!`,
         });
         onLogin({ email: credentials.id, password: credentials.password });
         setCredentials({ id: "", password: "" });
         onClose();
         navigate("/overview");
       } else {
-        toast({
+        setNotification({
+          isOpen: true,
+          type: "error",
           title: "Login Gagal",
-          description: response.message,
-          variant: "destructive",
+          message: response.message,
         });
       }
     } catch (error) {
-      toast({
+      setNotification({
+        isOpen: true,
+        type: "error",
         title: "Error",
-        description: "Terjadi kesalahan saat login",
-        variant: "destructive",
+        message: "Terjadi kesalahan saat login",
       });
     } finally {
       setIsLoggingIn(false);
@@ -76,10 +91,11 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
 
   const handleCheckId = async () => {
     if (!signupData.id.trim()) {
-      toast({
+      setNotification({
+        isOpen: true,
+        type: "error",
         title: "Error",
-        description: "Masukkan ID terlebih dahulu",
-        variant: "destructive",
+        message: "Masukkan ID terlebih dahulu",
       });
       return;
     }
@@ -95,24 +111,28 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
           nama: response.data.nama,
           departemen: response.data.departemen
         });
-        toast({
+        setNotification({
+          isOpen: true,
+          type: "success",
           title: "ID Ditemukan",
-          description: `ID ${signupData.id} ditemukan untuk ${response.data.nama}`,
+          message: `ID ${signupData.id} ditemukan untuk ${response.data.nama}`,
         });
       } else {
         setIdExists(false);
         setFoundUserData(null);
-        toast({
+        setNotification({
+          isOpen: true,
+          type: "error",
           title: "ID Tidak Ditemukan",
-          description: "ID tidak terdaftar dalam sistem",
-          variant: "destructive",
+          message: "ID tidak terdaftar dalam sistem",
         });
       }
     } catch (error) {
-      toast({
+      setNotification({
+        isOpen: true,
+        type: "error",
         title: "Error",
-        description: "Terjadi kesalahan saat mengecek ID",
-        variant: "destructive",
+        message: "Terjadi kesalahan saat mengecek ID",
       });
     } finally {
       setIsCheckingId(false);
@@ -127,9 +147,11 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
       const response = await registerUser(signupData.id, signupData.password);
       
       if (response.success) {
-        toast({
+        setNotification({
+          isOpen: true,
+          type: "success",
           title: "Registrasi Berhasil",
-          description: "Password berhasil disimpan",
+          message: "Password berhasil disimpan",
         });
         
         // Auto login after successful registration
@@ -143,17 +165,19 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
           navigate("/overview");
         }
       } else {
-        toast({
+        setNotification({
+          isOpen: true,
+          type: "error",
           title: "Registrasi Gagal",
-          description: response.message,
-          variant: "destructive",
+          message: response.message,
         });
       }
     } catch (error) {
-      toast({
+      setNotification({
+        isOpen: true,
+        type: "error",
         title: "Error",
-        description: "Terjadi kesalahan saat registrasi",
-        variant: "destructive",
+        message: "Terjadi kesalahan saat registrasi",
       });
     } finally {
       setIsRegistering(false);
@@ -161,8 +185,28 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+    <>
+      <LoadingScreen
+        isOpen={isCheckingId || isLoggingIn || isRegistering}
+        message={
+          isCheckingId
+            ? "Mengecek ID..."
+            : isLoggingIn
+            ? "Login..."
+            : "Menyimpan data..."
+        }
+      />
+
+      <NotificationDialog
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+      />
+
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Akses Dashboard</DialogTitle>
           <DialogDescription>
@@ -322,5 +366,6 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
         </Tabs>
       </DialogContent>
     </Dialog>
+    </>
   );
 };
