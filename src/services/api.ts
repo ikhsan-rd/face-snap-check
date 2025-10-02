@@ -199,38 +199,6 @@ export async function logoutUser(userId: string): Promise<ApiResponse> {
   }
 }
 
-// export async function uploadPhoto(uploadData: {
-//   photoData: string;
-//   fileName: string;
-// }): Promise<
-//   ApiResponse<{
-//     fileId: string;
-//     fileUrl: string;
-//     folderPath: string;
-//     fileName: string;
-//   }>
-// > {
-//   const formData = new FormData();
-//   formData.append("action", "uploadPhoto");
-//   formData.append("photoData", uploadData.photoData);
-//   formData.append("photoFileName", uploadData.fileName);
-
-//   try {
-//     const response = await fetch(APPS_SCRIPT_URL, {
-//       method: "POST",
-//       body: formData,
-//     });
-
-//     const data = await response.json();
-//     return data;
-//   } catch (error) {
-//     return {
-//       success: false,
-//       message: "Gagal upload foto: " + (error as Error).message,
-//     };
-//   }
-// }
-
 export async function uploadPhoto(
   photoData: string,
   fileName: string,
