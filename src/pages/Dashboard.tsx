@@ -31,11 +31,17 @@ const Dashboard = () => {
       });
       navigate("/");
     } else {
+      // Even if backend logout fails (e.g., UUID deleted from spreadsheet),
+      // we should still clear local session for user safety
+      localStorage.removeItem("user_data");
+      localStorage.removeItem("is_logged_in");
+      
       toast({
-        title: "Error",
-        description: response.message || "Gagal logout",
-        variant: "destructive",
+        title: "Logout Lokal",
+        description: "Sesi lokal telah dibersihkan. Data di server mungkin sudah tidak sinkron.",
+        variant: "default",
       });
+      navigate("/");
     }
     setIsLoggingOut(false);
   };
