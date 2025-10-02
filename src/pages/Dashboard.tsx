@@ -2,13 +2,42 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ClipboardCheck, BarChart3, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { getCurrentUser, logoutUser } from "@/services/api";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const currentUser = getCurrentUser();
 
-  const handleLogout = () => {
-    // For now, just navigate back to presensi
-    navigate("/");
+  useEffect(() => {
+    if (!currentUser) {
+      navigate("/");
+    }
+  }, [currentUser, navigate]);
+
+  const handleLogout = async () => {
+    if (!currentUser) return;
+    
+    setIsLoggingOut(true);
+    const response = await logoutUser(currentUser.id);
+    
+    if (response.success) {
+      toast({
+        title: "Berhasil",
+        description: "Logout berhasil",
+      });
+      navigate("/");
+    } else {
+      toast({
+        title: "Error",
+        description: response.message || "Gagal logout",
+        variant: "destructive",
+      });
+    }
+    setIsLoggingOut(false);
   };
 
   return (
@@ -19,9 +48,9 @@ const Dashboard = () => {
             <h1 className="text-2xl font-bold">Dashboard</h1>
             <p className="text-muted-foreground">Selamat datang kembali!</p>
           </div>
-          <Button variant="ghost" onClick={handleLogout}>
+          <Button variant="ghost" onClick={handleLogout} disabled={isLoggingOut}>
             <LogOut className="h-4 w-4 mr-2" />
-            Logout
+            {isLoggingOut ? "Logging out..." : "Logout"}
           </Button>
         </header>
 
