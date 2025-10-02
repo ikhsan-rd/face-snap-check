@@ -2,7 +2,16 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, MapPin, Clock, ClipboardCheck, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  MapPin,
+  Clock,
+  ClipboardCheck,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchDashboard, getCurrentUser } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +24,9 @@ const Overview = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null
+  );
   const itemsPerPage = 10;
 
   const currentUser = getCurrentUser();
@@ -33,10 +44,13 @@ const Overview = () => {
     if (!currentUser) return;
 
     setIsLoading(true);
-    const bulanFilter = `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}`;
-    
-    const response = await fetchDashboard(currentUser.id, bulanFilter);
-    
+    const bulan = `${selectedYear}-${String(selectedMonth + 1).padStart(
+      2,
+      "0"
+    )}`;
+
+    const response = await fetchDashboard(currentUser.id, bulan);
+
     if (response.success && response.data) {
       setDashboardData(response.data);
     } else {
@@ -60,13 +74,23 @@ const Overview = () => {
     const status = presensi.toLowerCase();
     switch (status) {
       case "hadir":
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Hadir</Badge>;
-      case "pulang":
-        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Pulang</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+            Hadir
+          </Badge>
+        );
       case "izin":
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Izin</Badge>;
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+            Izin
+          </Badge>
+        );
       case "sakit":
-        return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">Sakit</Badge>;
+        return (
+          <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
+            Sakit
+          </Badge>
+        );
       default:
         return <Badge variant="secondary">{presensi}</Badge>;
     }
@@ -128,17 +152,20 @@ const Overview = () => {
               Presensi
             </Button>
           </div>
-          
+
           {/* Month Selector */}
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handlePrevMonth}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <div className="text-sm font-medium min-w-[150px] text-center">
-              {new Date(selectedYear, selectedMonth).toLocaleDateString("id-ID", { 
-                month: "long",
-                year: "numeric"
-              })}
+              {new Date(selectedYear, selectedMonth).toLocaleDateString(
+                "id-ID",
+                {
+                  month: "long",
+                  year: "numeric",
+                }
+              )}
             </div>
             <Button variant="outline" size="sm" onClick={handleNextMonth}>
               <ChevronRight className="h-4 w-4" />
@@ -155,11 +182,13 @@ const Overview = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Hadir</p>
-                <p className="text-2xl font-bold text-green-600">{stats.totalHadir}</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {stats.totalHadir}
+                </p>
               </div>
             </div>
           </Card>
-          
+
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-yellow-100 rounded-lg">
@@ -167,11 +196,13 @@ const Overview = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Terlambat</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.totalTerlambat}</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {stats.totalTerlambat}
+                </p>
               </div>
             </div>
           </Card>
-          
+
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-orange-100 rounded-lg">
@@ -179,11 +210,13 @@ const Overview = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Izin</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.totalIzin}</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {stats.totalIzin}
+                </p>
               </div>
             </div>
           </Card>
-          
+
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-100 rounded-lg">
@@ -191,19 +224,9 @@ const Overview = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Sakit</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.totalSakit}</p>
-              </div>
-            </div>
-          </Card>
-          
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Clock className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pulang</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.totalPulang}</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {stats.totalSakit}
+                </p>
               </div>
             </div>
           </Card>
@@ -218,7 +241,7 @@ const Overview = () => {
               Presensi
             </Button>
           </div>
-          
+
           {/* Desktop View */}
           <div className="hidden md:block">
             <div className="grid grid-cols-5 gap-4 pb-2 text-sm font-medium text-muted-foreground border-b mb-4">
@@ -235,20 +258,32 @@ const Overview = () => {
                 </div>
               ) : (
                 paginatedData.map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-5 gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                  <div
+                    key={idx}
+                    className="grid grid-cols-5 gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
                     <div className="font-medium">
-                      {new Date(item.tanggal).toLocaleDateString("id-ID", { 
+                      {new Date(item.tanggal).toLocaleDateString("id-ID", {
                         day: "2-digit",
                         month: "short",
-                        year: "numeric"
+                        year: "numeric",
                       })}
                     </div>
                     <div>{getStatusBadge(item.presensi)}</div>
-                    <div className="text-sm text-muted-foreground">{item.jam}</div>
-                    <div className="text-sm text-muted-foreground truncate">{item.lokasi}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {item.jam}
+                    </div>
+                    <div className="text-sm text-muted-foreground truncate">
+                      {item.lokasi}
+                    </div>
                     <div className="text-sm">
                       {item.maps && (
-                        <a href={item.maps} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                        <a
+                          href={item.maps}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline flex items-center gap-1"
+                        >
                           <MapPin className="h-3 w-3" />
                           Maps
                         </a>
@@ -271,9 +306,9 @@ const Overview = () => {
                 <div key={idx} className="p-3 border rounded-lg space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="font-medium">
-                      {new Date(item.tanggal).toLocaleDateString("id-ID", { 
+                      {new Date(item.tanggal).toLocaleDateString("id-ID", {
                         day: "2-digit",
-                        month: "short"
+                        month: "short",
                       })}
                     </div>
                     {getStatusBadge(item.presensi)}
@@ -289,7 +324,12 @@ const Overview = () => {
                     </div>
                   </div>
                   {item.maps && (
-                    <a href={item.maps} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
+                    <a
+                      href={item.maps}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline"
+                    >
                       Lihat di Maps →
                     </a>
                   )}
@@ -308,7 +348,9 @@ const Overview = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
                   disabled={currentPage === 1}
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -316,7 +358,9 @@ const Overview = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
                   disabled={currentPage === totalPages}
                 >
                   <ChevronRight className="h-4 w-4" />

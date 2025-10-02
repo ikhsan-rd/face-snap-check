@@ -87,7 +87,7 @@ export async function cekUser(
 
 export async function fetchDashboard(
   userId: string,
-  bulanFilter?: string
+  bulan?: string
 ): Promise<ApiResponse<DashboardData>> {
   const uuid = getDeviceUUID();
   const params = new URLSearchParams({
@@ -96,8 +96,8 @@ export async function fetchDashboard(
     uuid: uuid,
   });
 
-  if (bulanFilter) {
-    params.append("bulanFilter", bulanFilter);
+  if (bulan) {
+    params.append("bulan", bulan);
   }
 
   const url = `${APPS_SCRIPT_URL}?${params.toString()}`;
