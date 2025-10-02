@@ -134,6 +134,8 @@ export const PresensiForm = () => {
 
     setIsChecking(true);
 
+    console.log(formData.id);
+
     try {
       // 1. Fetch user data
       setLoadingMessage("Mendapatkan data");

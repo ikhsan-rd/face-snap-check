@@ -20,7 +20,6 @@ interface CameraModalProps {
   onCapture: () => void;
   location: string;
   imageUrl: string | null;
-  onDelete: () => void;
   onRetake: () => void;
   mode: "camera" | "preview";
 }
@@ -34,7 +33,6 @@ export const CameraModal = ({
   onCapture,
   location,
   imageUrl,
-  onDelete,
   onRetake,
   mode,
 }: CameraModalProps) => {
@@ -70,8 +68,8 @@ export const CameraModal = ({
               <img
                 src={imageUrl}
                 alt="Captured"
-                className="w-full h-full object-cover"
                 loading="lazy"
+                className="left-0 right-0 rounded-lg w-full h-full object-cover"
               />
             ) : (
               <>
@@ -102,7 +100,7 @@ export const CameraModal = ({
                 </div>
 
                 <div className="absolute bottom-3 left-3 text-white text-xs pointer-events-none">
-                  <div className="space-y-1">
+                  <div className="  ">
                     <div className="rounded text-shadow">
                       {location ? location : "Mendapatkan lokasi..."}
                     </div>
@@ -118,24 +116,17 @@ export const CameraModal = ({
           <div className="flex gap-2">
             {mode === "preview" ? (
               <>
-                <Button variant="outline" onClick={onRetake} className="flex-1">
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Ambil Ulang
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={onDelete}
-                  className="bg-red-600 hover:bg-red-800 text-white hover:text-white"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-
                 <Button
                   onClick={onClose}
                   variant="outline"
-                  className="text-white hover:text-white bg-blue-600 hover:bg-blue-800"
+                  className=" flex-1 text-white hover:text-white bg-blue-600 hover:bg-blue-800"
                 >
                   <Check className="w-4 h-4" />
+                  Gunakan Foto
+                </Button>
+                <Button variant="outline" onClick={onRetake}>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Ulang
                 </Button>
               </>
             ) : (
@@ -148,7 +139,7 @@ export const CameraModal = ({
                   <CameraIcon className="w-4 h-4 mr-2" />
                   Ambil Foto
                 </Button>
-                <Button variant="outline" onClick={onClose} className="">
+                <Button variant="outline" onClick={onClose}>
                   <X className="w-4 h-4 mr-2" />
                   Batal
                 </Button>

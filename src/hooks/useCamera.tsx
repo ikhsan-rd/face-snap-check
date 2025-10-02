@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import * as tf from "@tensorflow/tfjs";
 import * as blazeface from "@tensorflow-models/blazeface";
+import { useIsMobile } from "./use-mobile";
 
-export const useCamera = () => {
+export const useCamera = (location?: string) => {
   const [mode, setMode] = useState<"camera" | "preview">("camera");
 
   const [cameraActive, setCameraActive] = useState(false);
@@ -16,6 +17,8 @@ export const useCamera = () => {
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
   const detectionsRef = useRef<any[]>([]);
+
+  const isMobile = useIsMobile();
 
   // Load BlazeFace model once
   useEffect(() => {
@@ -40,7 +43,7 @@ export const useCamera = () => {
     async function startCamera() {
       try {
         streamRef.current = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
+          video: { facingMode: "user", aspectRatio: 0.8 },
           audio: false,
         });
         if (videoRef.current) {
@@ -51,7 +54,7 @@ export const useCamera = () => {
         console.error("camera init error", err);
       }
     }
-    if (cameraModalOpen) startCamera();
+    if (cameraModalOpen && mode === "camera") startCamera();
     return () => {
       // Clean up camera stream when modal closes or component unmounts
       if (streamRef.current) {
@@ -69,7 +72,7 @@ export const useCamera = () => {
       setCameraActive(false);
       setFaceDetected(false);
     };
-  }, [cameraModalOpen]);
+  }, [cameraModalOpen, mode]);
 
   // Face detection loop
   useEffect(() => {
@@ -132,10 +135,9 @@ export const useCamera = () => {
           const [x1, y1] = pred.topLeft;
           const [x2, y2] = pred.bottomRight;
 
-          const width = x2 - x1;
-          const height = y2 - y1;
-
-          ctx.strokeRect(x1, y1, width, height);
+          ctx.strokeStyle = "rgba(34,197,94,0.9)";
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
         });
       }
 
@@ -150,27 +152,115 @@ export const useCamera = () => {
     };
   }, [cameraModalOpen, model]);
 
+  // Fungsi helper untuk membungkus teks panjang
+  function wrapText(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    maxWidth: number
+  ) {
+    const words = text.split(" ");
+    const lines: string[] = [];
+    let line = "";
+
+    words.forEach((word) => {
+      const testLine = line + word + " ";
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && line !== "") {
+        lines.push(line.trim());
+        line = word + " ";
+      } else {
+        line = testLine;
+      }
+    });
+    lines.push(line.trim());
+    return lines;
+  }
+
   const capturePhoto = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current) return;
 
     const video = videoRef.current;
+
+    const maxWidth = 640; // target lebar
+    const scale = video.videoWidth > maxWidth ? maxWidth / video.videoWidth : 1;
+
     const captureCanvas = document.createElement("canvas");
-    captureCanvas.width = video.videoWidth;
-    captureCanvas.height = video.videoHeight;
+    captureCanvas.width = video.videoWidth * scale;
+    captureCanvas.height = video.videoHeight * scale;
 
     const ctx = captureCanvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.drawImage(video, 0, 0);
-    const imageData = captureCanvas.toDataURL("image/png");
+    // === Gambar video ===
+    if (!isMobile) {
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(
+        video,
+        -captureCanvas.width,
+        0,
+        captureCanvas.width,
+        captureCanvas.height
+      );
+      ctx.restore(); // reset biar teks tidak ikut mirror
+    } else {
+      ctx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+    }
+
+    // === Overlay teks ===
+    const currentTime = new Date().toLocaleString("id-ID");
+    const locationText = location || "Lokasi tidak tersedia";
+
+    const fontSize = Math.max(13, captureCanvas.width / 35);
+    ctx.font = `${fontSize}px Arial`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = "white";
+
+    ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+
+    const padding = 19;
+    const lineHeight = fontSize * 1.4;
+
+    const wrappedLocation = wrapText(
+      ctx,
+      locationText,
+      captureCanvas.width - padding * 2
+    );
+
+    const lines = [...wrappedLocation, currentTime];
+    const startY = captureCanvas.height - padding;
+
+    lines.forEach((line, index) => {
+      const y = startY - (lines.length - 1 - index) * lineHeight;
+      ctx.fillText(line, padding, y);
+    });
+
+    // Simpan hasil gambar
+    const imageData = captureCanvas.toDataURL("image/jpeg", 0.7);
+
+    // hitung ukuran file
+    function dataURLtoBlob(dataurl: string) {
+      const arr = dataurl.split(",");
+      const mime = arr[0].match(/:(.*?);/)![1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new Blob([u8arr], { type: mime });
+    }
+
+    const blob = dataURLtoBlob(imageData);
+    console.log("Ukuran gambar:", (blob.size / 1024).toFixed(2), "KB");
+
     setCapturedImage(imageData);
     setMode("preview");
-  }, []);
-
-  const deletePhoto = useCallback(() => {
-    setCapturedImage(null);
-    setMode("camera");
-  }, []);
+  }, [isMobile, location]);
 
   const retakePhoto = useCallback(() => {
     setCapturedImage(null);
@@ -192,7 +282,8 @@ export const useCamera = () => {
     rafRef,
     detectionsRef,
     capturePhoto,
-    deletePhoto,
     retakePhoto,
+    mode,
+    setMode,
   };
 };

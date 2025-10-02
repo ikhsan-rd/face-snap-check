@@ -5,6 +5,7 @@ import {
   isLoggedIn as checkIsLoggedIn,
   getCurrentUser,
   submitPresensi,
+  uploadPhoto,
 } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,12 +30,13 @@ import {
   Eye,
   LogIn,
   Home,
+  Send,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingScreen } from "./LoadingScreen";
 import { LoginModal } from "./LoginModal";
 import { CameraModal } from "./CameraModal";
-import { PhotoPreview } from "./PhotoPreview";
 import { NotificationDialog } from "./NotificationDialog";
 import { useCamera } from "@/hooks/useCamera";
 import { useLocation } from "@/hooks/useLocation";
@@ -63,37 +65,15 @@ export const PresensiForm = () => {
     fingerprint: "",
   });
 
-  // const [isChecking, setIsChecking] = useState(false);
-  // const [isIdChecked, setIsIdChecked] = useState(false);
-  // const [idNeedsRecheck, setIdNeedsRecheck] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
 
-  // const [cameraActive, setCameraActive] = useState(false);
-  // const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
-  // const [capturedImage, setCapturedImage] = useState<string | null>(null);
-
-  // Refs for media
-  // const videoRef = useRef<HTMLVideoElement | null>(null);
-  // const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  // const streamRef = useRef<MediaStream | null>(null);
-  // const rafRef = useRef<number | null>(null);
-  // const cameraStartedRef = useRef(false);
-  // const detectionsRef = useRef<any[]>([]);
-  // const [model, setModel] = useState(null);
-  // const [faceDetected, setFaceDetected] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [showLoginAfterSubmit, setShowLoginAfterSubmit] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
-
-  // const [locationData, setLocationData] = useState({
-  //   Flatitude: "0",
-  //   Flongitude: "0",
-  //   Flokasi: "",
-  //   FmapUrl: "",
-  // });
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const [notification, setNotification] = useState<{
     isOpen: boolean;
@@ -108,9 +88,7 @@ export const PresensiForm = () => {
   });
 
   const navigate = useNavigate();
-  const { toast } = useToast();
 
-  // +
   const {
     cameraModalOpen,
     setCameraModalOpen,
@@ -119,9 +97,9 @@ export const PresensiForm = () => {
     videoRef,
     canvasRef,
     capturePhoto,
-    deletePhoto,
     retakePhoto,
-  } = useCamera();
+    mode,
+  } = useCamera(formData.lokasi);
 
   // +
   const { getLocationAndDecode } = useLocation();
@@ -418,7 +396,6 @@ export const PresensiForm = () => {
 
       // 3. Generate unique code
       const deviceIdentity = await getDeviceIdentity();
-      // setUniqueCode(`${deviceIdentity.uuid}_${deviceIdentity.fingerprint}`);
 
       // 4. Update form data
       setFormData((prev) => ({
@@ -822,31 +799,54 @@ export const PresensiForm = () => {
   //   setUniqueCode("");
   // };
 
-  // const cekConsole = () => {
-  //   console.log({
-  //     cameraActive,
-  //     cameraModalOpen,
-  //     faceDetected,
-  //     videoRef,
-  //     canvasRef,
-  //     streamRef,
-  //     rafRef,
-  //     cameraStartedRef,
-  //     detectionsRef,
-  //     model,
-  //   });
+  // const handleUploadFoto = async () => {
+  //   if (!capturedImage) return null;
+
+  //   try {
+  //     const response = await uploadPhoto({
+  //       photoData: capturedImage,
+  //       fileName: `${formData.id}-${formData.tanggal}-${formData.presensi}.jpg`,
+  //     });
+  //     return response;
+  //   } catch (error) {
+  //     console.error("Gagal mengirim foto:", error);
+  //     return {
+  //       success: false,
+  //       message: "Terjadi kesalahan saat upload foto",
+  //     };
+  //   }
   // };
 
   const handleSubmit = async () => {
-    // if (!isSubmitEnabled()) return;
-
-    if (!capturedImage) return; //+
+    if (!capturedImage) return;
 
     setIsLoading(true);
-    setLoadingMessage("Mengirim data");
-
     try {
-      //+
+      // 1. Upload foto dulu
+      const fileName = `${formData.id}-${formData.tanggal}-${formData.presensi}.jpg`;
+
+      setLoadingMessage("Upload Foto");
+      const uploadRes = await uploadPhoto(
+        capturedImage,
+        fileName,
+        formData.presensi
+      );
+
+      if (!uploadRes?.success) {
+        setNotification({
+          isOpen: true,
+          type: "error",
+          title: "Upload Gagal",
+          message: uploadRes?.message || "Foto gagal diupload",
+        });
+        return; // stop proses
+      }
+
+      const photoData = uploadRes.data;
+
+      setLoadingMessage("Mengirim Data");
+
+      // 2. Submit presensi + sertakan photoFileId
       const response = await submitPresensi({
         id: formData.id,
         nama: formData.nama,
@@ -856,13 +856,18 @@ export const PresensiForm = () => {
         jam: formData.jam,
         lokasi: formData.lokasi,
         urlMaps: formData.urlMaps,
-        latitude: parseFloat(formData.latitude),
-        longitude: parseFloat(formData.longitude),
-        photoData: capturedImage,
-        photoFileName: `${formData.id}-${formData.tanggal}-${formData.presensi}.png`,
+        latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
+        longitude: formData.longitude
+          ? parseFloat(formData.longitude)
+          : undefined,
         fingerprint: formData.fingerprint,
+        photoFileName: photoData.fileName,
+        photoFileUrl: photoData.fileUrl,
       });
 
+      console.log(response);
+
+      // 3. Notifikasi
       if (response.success) {
         setNotification({
           isOpen: true,
@@ -871,72 +876,6 @@ export const PresensiForm = () => {
           message: "Data presensi berhasil disimpan!",
         });
 
-        // if (!capturedImage) {
-        //   throw new Error(
-        //     "Foto belum diambil. Harap ambil foto terlebih dahulu."
-        //   );
-        // }
-
-        // const submitFormData = new FormData();
-
-        // submitFormData.append("id", formData.id.trim());
-        // submitFormData.append("nama", formData.nama.trim());
-        // submitFormData.append("departemen", formData.departemen.trim());
-        // submitFormData.append("tanggal", formData.tanggal);
-        // submitFormData.append("presensi", formData.presensi.trim());
-        // submitFormData.append("lokasi", formData.lokasi);
-        // submitFormData.append("urlMaps", formData.urlMaps);
-        // submitFormData.append("latitude", formData.latitude.trim());
-        // submitFormData.append("longitude", formData.longitude.trim());
-        // submitFormData.append("jam", formData.jam);
-        // const deviceIdentity = await getDeviceIdentity();
-        // submitFormData.append("uuid", deviceIdentity.uuid);
-        // submitFormData.append("fingerprint", deviceIdentity.fingerprint);
-
-        // submitFormData.append("photoData", capturedImage);
-
-        // console.log(
-        //   "Data form yang akan dikirim:",
-        //   Object.fromEntries(submitFormData.entries())
-        // );
-
-        // const response = await fetch(
-        //   `https://script.google.com/macros/s/${API_KEY}/exec`,
-        //   {
-        //     method: "POST",
-        //     body: submitFormData,
-        //     redirect: "follow",
-        //   }
-        // );
-
-        // console.log("Response status:", response.status);
-
-        // let result = { success: false, message: "" };
-        // let rawText = "";
-
-        // try {
-        //   rawText = await response.text();
-        //   console.log("Raw text dari response:", rawText);
-        //   result = JSON.parse(rawText);
-        // } catch (jsonError) {
-        //   console.warn(
-        //     "Gagal parsing JSON. Tapi response 200, kita anggap berhasil."
-        //   );
-        //   result.success = true;
-        //   result.message = "Presensi berhasil (parsed error)";
-        // }
-
-        // if (result.success) {
-        //   setNotification({
-        //     isOpen: true,
-        //     type: "success",
-        //     title: "Presensi Berhasil",
-        //     message: "Presensi berhasil!",
-        //   });
-        //   setShowLoginAfterSubmit(true);
-        //   resetForm();
-
-        // +
         setFormData({
           id: "",
           nama: "",
@@ -951,33 +890,23 @@ export const PresensiForm = () => {
           uuid: "",
           fingerprint: "",
         });
-        deletePhoto();
+        retakePhoto();
         setIsIdChecked(false);
         setIdNeedsRecheck(false);
       } else {
-        //+
         setNotification({
           isOpen: true,
           type: "error",
           title: "Presensi Gagal",
           message: response.message || "Gagal menyimpan data presensi",
         });
-
-        // throw new Error(result.message || "Gagal presensi. Coba lagi.");
       }
     } catch (error) {
-      console.error("Gagal mengirim data:", error);
-      // let errorMessage = "Gagal mengirim data. Coba lagi nanti.";
-
-      // if (error instanceof Error) {
-      //   errorMessage = error.message;
-      // }
-
+      console.error("Gagal submit:", error);
       setNotification({
         isOpen: true,
         type: "error",
         title: "Gagal Submit",
-        // message: errorMessage,
         message: "Terjadi kesalahan saat mengirim data",
       });
     } finally {
@@ -1254,7 +1183,7 @@ export const PresensiForm = () => {
                 Foto
               </label>
 
-              {!capturedImage && (
+              <div className="flex gap-2">
                 <Button
                   // onClick={startCamera}
                   onClick={() => setCameraModalOpen(true)}
@@ -1262,23 +1191,28 @@ export const PresensiForm = () => {
                   className="w-full py-6 border-dashed border-2"
                   disabled={!isCameraEnabled() || isLoading}
                 >
-                  <CameraIcon className="mr-2 h-5 w-5" />
-                  {!isIdChecked ? "Cek ID Terlebih Dahulu" : "Buka Kamera"}
+                  {capturedImage ? (
+                    <>
+                      <CameraIcon className="mr-2 h-5 w-5" />
+                      Lihat Foto
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="mr-2 h-5 w-5" />
+                      {!isIdChecked ? "Cek ID Terlebih Dahulu" : "Buka Kamera"}
+                    </>
+                  )}
                 </Button>
-              )}
 
-              {capturedImage && (
-                <Button
-                  // onClick={openPreview}
-                  onClick={() => setPreviewModalOpen(true)}
+                {/* <Button
+                  onClick={handleUploadFoto}
                   variant="outline"
-                  className="w-full py-6 border-dashed border-2"
-                  disabled={!isCameraEnabled() || isLoading}
+                  className="py-6"
                 >
-                  <Eye className="mr-2 h-5 w-5" />
-                  Lihat Foto
-                </Button>
-              )}
+                  <Upload className="mr-2 h-5 w-5" />
+                  Upload
+                </Button> */}
+              </div>
             </div>
 
             <div className="h-px w-full bg-red-700"></div>
@@ -1316,9 +1250,8 @@ export const PresensiForm = () => {
         onCapture={capturePhoto}
         location={formData.lokasi}
         imageUrl={capturedImage || ""}
-        onDelete={deletePhoto}
         onRetake={retakePhoto}
-        mode="camera"
+        mode={mode}
       />
 
       {/* <PhotoPreview
@@ -1417,13 +1350,13 @@ export const PresensiForm = () => {
       </Dialog> */}
 
       {/* Preview Modal */}
-      <PhotoPreview
+      {/* <PhotoPreview
         isOpen={previewModalOpen}
         onClose={() => setPreviewModalOpen(false)}
         imageUrl={capturedImage || ""}
         onDelete={deletePhoto}
         onRetake={retakePhoto}
-      />
+      /> */}
       {/* <Dialog
         open={previewModalOpen}
         onOpenChange={(open) => {

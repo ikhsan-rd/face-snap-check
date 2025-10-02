@@ -199,6 +199,70 @@ export async function logoutUser(userId: string): Promise<ApiResponse> {
   }
 }
 
+// export async function uploadPhoto(uploadData: {
+//   photoData: string;
+//   fileName: string;
+// }): Promise<
+//   ApiResponse<{
+//     fileId: string;
+//     fileUrl: string;
+//     folderPath: string;
+//     fileName: string;
+//   }>
+// > {
+//   const formData = new FormData();
+//   formData.append("action", "uploadPhoto");
+//   formData.append("photoData", uploadData.photoData);
+//   formData.append("photoFileName", uploadData.fileName);
+
+//   try {
+//     const response = await fetch(APPS_SCRIPT_URL, {
+//       method: "POST",
+//       body: formData,
+//     });
+
+//     const data = await response.json();
+//     return data;
+//   } catch (error) {
+//     return {
+//       success: false,
+//       message: "Gagal upload foto: " + (error as Error).message,
+//     };
+//   }
+// }
+
+export async function uploadPhoto(
+  photoData: string,
+  fileName: string,
+  presensi: string
+) {
+  const formData = new FormData();
+  formData.append("action", "uploadPhoto");
+  formData.append("photoData", photoData);
+  formData.append("photoFileName", fileName);
+  formData.append("presensi", presensi);
+
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      body: formData,
+    });
+    const data = await response.json();
+    return data as {
+      success: boolean;
+      message?: string;
+      data?: {
+        fileId?: string;
+        fileUrl?: string;
+        folderPath?: string;
+        fileName?: string;
+      };
+    };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
 export async function submitPresensi(presensiData: {
   id: string;
   nama: string;
@@ -210,9 +274,9 @@ export async function submitPresensi(presensiData: {
   urlMaps?: string;
   latitude?: number;
   longitude?: number;
-  photoData: string;
-  photoFileName?: string;
   fingerprint?: string;
+  photoFileUrl?: string;
+  photoFileName?: string;
 }): Promise<ApiResponse> {
   const uuid = getDeviceUUID();
   const formData = new FormData();
@@ -226,17 +290,18 @@ export async function submitPresensi(presensiData: {
   formData.append("jam", presensiData.jam);
   formData.append("lokasi", presensiData.lokasi);
   formData.append("uuid", uuid);
-  formData.append("photoData", presensiData.photoData);
 
   if (presensiData.urlMaps) formData.append("urlMaps", presensiData.urlMaps);
   if (presensiData.latitude !== undefined)
     formData.append("latitude", presensiData.latitude.toString());
   if (presensiData.longitude !== undefined)
     formData.append("longitude", presensiData.longitude.toString());
-  if (presensiData.photoFileName)
-    formData.append("photoFileName", presensiData.photoFileName);
   if (presensiData.fingerprint)
     formData.append("fingerprint", presensiData.fingerprint);
+  if (presensiData.photoFileUrl)
+    formData.append("photoFileUrl", presensiData.photoFileUrl);
+  if (presensiData.photoFileName)
+    formData.append("photoFileName", presensiData.photoFileName);
 
   try {
     const response = await fetch(APPS_SCRIPT_URL, {
