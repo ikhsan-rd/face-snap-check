@@ -74,7 +74,7 @@ export const CameraModal = ({
                 ref={videoRef}
                 playsInline
                 muted
-                className="w-full h-full object-cover md:rounded-lg transform scale-x-[-1]"
+                className="w-full h-full object-cover md:rounded-lg scale-x-[-1]"
               />
 
               <canvas
