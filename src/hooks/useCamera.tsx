@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import * as tf from "@tensorflow/tfjs";
 import * as blazeface from "@tensorflow-models/blazeface";
 import { useIsMobile } from "./use-mobile";
+import { useRatio } from "@/config/camera";
 
 export const useCamera = (location?: string) => {
   const [mode, setMode] = useState<"camera" | "preview">("camera");
@@ -43,7 +44,7 @@ export const useCamera = (location?: string) => {
     async function startCamera() {
       try {
         streamRef.current = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", aspectRatio: 0.8 },
+          video: { facingMode: "user", aspectRatio: Number(useRatio) },
           audio: false,
         });
         if (videoRef.current) {
