@@ -82,7 +82,6 @@ export const useCamera = (location?: string) => {
     let rafId: number;
     let running = true;
 
-    // Face detection loop
     async function loop() {
       if (!running) return;
 
@@ -105,23 +104,52 @@ export const useCamera = (location?: string) => {
         return;
       }
 
-      // Gunakan ukuran tampilan elemen video, bukan ukuran sensor
+      // Ukuran tampilan elemen video (UI)
       const displayWidth = video.clientWidth;
       const displayHeight = video.clientHeight;
       canvas.width = displayWidth;
       canvas.height = displayHeight;
 
-      // Buat canvas offscreen untuk crop sesuai tampilan
+      // Hitung rasio target (misalnya 5/4)
+      const targetRatio = eval(useRatio);
+      const videoRatio = video.videoWidth / video.videoHeight;
+
+      // Tentukan area crop dari video asli agar sesuai targetRatio
+      let sx = 0,
+        sy = 0,
+        sWidth = video.videoWidth,
+        sHeight = video.videoHeight;
+      if (videoRatio > targetRatio) {
+        // video lebih lebar → crop kiri-kanan
+        sWidth = video.videoHeight * targetRatio;
+        sx = (video.videoWidth - sWidth) / 2;
+      } else {
+        // video lebih tinggi → crop atas-bawah
+        sHeight = video.videoWidth / targetRatio;
+        sy = (video.videoHeight - sHeight) / 2;
+      }
+
+      // Buat canvas offscreen untuk crop sesuai aspect ratio
       const offscreenCanvas = document.createElement("canvas");
       offscreenCanvas.width = displayWidth;
       offscreenCanvas.height = displayHeight;
       const offCtx = offscreenCanvas.getContext("2d");
       if (!offCtx) return;
 
-      // Gambar video sesuai tampilan yang terlihat
-      offCtx.drawImage(video, 0, 0, displayWidth, displayHeight);
+      // Crop area dari video → scale ke display
+      offCtx.drawImage(
+        video,
+        sx,
+        sy,
+        sWidth,
+        sHeight, // sumber (crop area)
+        0,
+        0,
+        displayWidth,
+        displayHeight // tujuan (sesuai UI)
+      );
 
-      // Gunakan frame hasil crop untuk deteksi
+      // Ambil frame hasil crop
       const imageData = offCtx.getImageData(0, 0, displayWidth, displayHeight);
       const predictions = await model.estimateFaces(imageData, false);
 
@@ -138,8 +166,6 @@ export const useCamera = (location?: string) => {
           const [x1, y1] = pred.topLeft;
           const [x2, y2] = pred.bottomRight;
 
-          ctx.strokeStyle = "rgba(34,197,94,0.9)";
-          ctx.lineWidth = 3;
           ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
         });
       }
