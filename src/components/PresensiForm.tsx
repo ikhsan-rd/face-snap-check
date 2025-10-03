@@ -319,8 +319,8 @@ export const PresensiForm = () => {
 
   // Validation logic
   const isFormValid = () => {
-    if (!isIdChecked) return false;
-    if (!formData.presensi || formData.presensi.trim() === "") return false;
+    // if (!isIdChecked) return false;
+    // if (!formData.presensi || formData.presensi.trim() === "") return false;
     return true;
   };
 
