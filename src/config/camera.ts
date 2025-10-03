@@ -7,4 +7,4 @@
  */
 
 // src/config/ratio.ts
-export const useRatio = "5/4";
+export const useRatio = "4/5";
