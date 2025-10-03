@@ -502,79 +502,85 @@ export const PresensiForm = () => {
                     presensi: value,
                   });
                 }}
-                className="flex flex-wrap items-center justify-around"
+                className="grid grid-cols-1 md:grid-cols-2 items-center justify-around"
                 disabled={isLoading || !isIdChecked || idNeedsRecheck}
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem
-                    value="Hadir"
-                    id="datang"
-                    disabled={!isIdChecked || idNeedsRecheck}
-                  />
-                  <Label
-                    htmlFor="datang"
-                    className={cn(
-                      !isIdChecked || idNeedsRecheck
-                        ? "text-muted-foreground"
-                        : ""
-                    )}
-                  >
-                    Datang
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem
-                    value="Pulang"
-                    id="pulang"
-                    disabled={!isIdChecked || idNeedsRecheck}
-                  />
-                  <Label
-                    htmlFor="pulang"
-                    className={cn(
-                      !isIdChecked || idNeedsRecheck
-                        ? "text-muted-foreground"
-                        : ""
-                    )}
-                  >
-                    Pulang
-                  </Label>
+                {/* <div className="flex items-center justify-around "> */}
+                <div className="grid items-center grid-cols-2 md:flex md:justify-around">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem
+                      value="Hadir"
+                      id="datang"
+                      disabled={!isIdChecked || idNeedsRecheck}
+                    />
+                    <Label
+                      htmlFor="datang"
+                      className={cn(
+                        !isIdChecked || idNeedsRecheck
+                          ? "text-muted-foreground"
+                          : ""
+                      )}
+                    >
+                      Datang
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem
+                      value="Pulang"
+                      id="pulang"
+                      disabled={!isIdChecked || idNeedsRecheck}
+                    />
+                    <Label
+                      htmlFor="pulang"
+                      className={cn(
+                        !isIdChecked || idNeedsRecheck
+                          ? "text-muted-foreground"
+                          : ""
+                      )}
+                    >
+                      Pulang
+                    </Label>
+                  </div>
                 </div>
 
-                <div className="w-px h-6 bg-border mx-2"></div>
+                {/* <div className="hidden md:block w-px h-6 bg-border mx-2"></div> */}
 
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem
-                    value="Sakit"
-                    id="sakit"
-                    disabled={!isIdChecked || idNeedsRecheck}
-                  />
-                  <Label
-                    htmlFor="sakit"
-                    className={cn(
-                      !isIdChecked || idNeedsRecheck
-                        ? "text-muted-foreground"
-                        : ""
-                    )}
-                  >
-                    Sakit
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem
-                    value="Izin"
-                    id="izin"
-                    disabled={!isIdChecked || idNeedsRecheck}
-                  />
-                  <Label
-                    htmlFor="izin"
-                    className={cn(
-                      !isIdChecked || idNeedsRecheck
-                        ? "text-muted-foreground"
-                        : ""
-                    )}
-                  >
-                    Izin
-                  </Label>
+                {/* <div className="flex items-center justify-around"> */}
+                <div className="grid items-center grid-cols-2 md:flex md:justify-around">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem
+                      value="Sakit"
+                      id="sakit"
+                      disabled={!isIdChecked || idNeedsRecheck}
+                    />
+                    <Label
+                      htmlFor="sakit"
+                      className={cn(
+                        !isIdChecked || idNeedsRecheck
+                          ? "text-muted-foreground"
+                          : ""
+                      )}
+                    >
+                      Sakit
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem
+                      value="Izin"
+                      id="izin"
+                      disabled={!isIdChecked || idNeedsRecheck}
+                    />
+                    <Label
+                      htmlFor="izin"
+                      className={cn(
+                        !isIdChecked || idNeedsRecheck
+                          ? "text-muted-foreground"
+                          : ""
+                      )}
+                    >
+                      Izin
+                    </Label>
+                  </div>
                 </div>
               </RadioGroup>
             </div>

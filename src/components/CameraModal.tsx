@@ -6,7 +6,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Check, X, RefreshCw, CameraIcon, Trash2 } from "lucide-react";
+import { Check, X, RefreshCw, CameraIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRatio } from "@/config/camera";
 
