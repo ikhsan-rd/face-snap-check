@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import * as tf from "@tensorflow/tfjs";
 import * as blazeface from "@tensorflow-models/blazeface";
 import { useIsMobile } from "./use-mobile";
-import { useRatio } from "@/config/camera";
+import { useRatioDesktop, useRatioMobile } from "@/config/camera";
 
 export const useCamera = (location?: string) => {
   const [mode, setMode] = useState<"camera" | "preview">("camera");
@@ -43,7 +43,7 @@ export const useCamera = (location?: string) => {
   useEffect(() => {
     async function startCamera() {
       try {
-        const ratio = eval(useRatio);
+        const ratio = isMobile ? eval(useRatioMobile) : eval(useRatioDesktop);
 
         streamRef.current = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "user", aspectRatio: ratio },
@@ -111,7 +111,10 @@ export const useCamera = (location?: string) => {
       canvas.height = displayHeight;
 
       // Hitung rasio target (misalnya 5/4)
-      const targetRatio = eval(useRatio);
+      const targetRatio = isMobile
+        ? eval(useRatioMobile)
+        : eval(useRatioDesktop);
+
       const videoRatio = video.videoWidth / video.videoHeight;
 
       // Tentukan area crop dari video asli agar sesuai targetRatio
