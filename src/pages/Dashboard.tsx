@@ -2,13 +2,51 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getCurrentUser, logoutUser } from "@/services/api";
-import { ClipboardCheck, BarChart3, LogOut } from "lucide-react";
+import {
+  DashboardData,
+  fetchDashboard,
+  getCurrentUser,
+  logoutUser,
+} from "@/services/api";
+import {
+  ClipboardCheck,
+  BarChart3,
+  LogOut,
+  ChevronRight,
+  ChevronLeft,
+  Image,
+  MapPin,
+  HomeIcon,
+  Clock,
+  StethoscopeIcon,
+  FileText,
+  Calendar,
+} from "lucide-react";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { NotificationDialog } from "@/components/NotificationDialog";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Progress } from "@/components/ui/progress";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null
+  );
+  const itemsPerPage = 10;
+
+  const currentUser = getCurrentUser();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [notification, setNotification] = useState<{
     isOpen: boolean;
@@ -21,8 +59,6 @@ const Dashboard = () => {
     title: "",
     message: "",
   });
-  
-  const currentUser = getCurrentUser();
 
   useEffect(() => {
     if (!currentUser) {
@@ -32,10 +68,10 @@ const Dashboard = () => {
 
   const handleLogout = async () => {
     if (!currentUser) return;
-    
+
     setIsLoggingOut(true);
     const response = await logoutUser(currentUser.id);
-    
+
     try {
       if (response.success) {
         setNotification({
@@ -61,7 +97,8 @@ const Dashboard = () => {
         isOpen: true,
         type: "error",
         title: "Logout Lokal",
-        message: "Sesi lokal dihapus, tapi mungkin tidak tersinkronisasi dengan server.",
+        message:
+          "Sesi lokal dihapus, tapi mungkin tidak tersinkronisasi dengan server.",
       });
       localStorage.removeItem("user_data");
       localStorage.removeItem("is_logged_in");
@@ -69,6 +106,106 @@ const Dashboard = () => {
     } finally {
       setIsLoggingOut(false);
     }
+  };
+
+  useEffect(() => {
+    if (!currentUser) {
+      navigate("/");
+      return;
+    }
+
+    loadDashboardData();
+  }, [selectedMonth, selectedYear]);
+
+  const loadDashboardData = async () => {
+    if (!currentUser) return;
+
+    setIsLoading(true);
+    const bulan = `${selectedYear}-${String(selectedMonth + 1).padStart(
+      2,
+      "0"
+    )}`;
+
+    const response = await fetchDashboard(currentUser.id, bulan);
+
+    if (response.success && response.data) {
+      setDashboardData(response.data);
+    } else {
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Error",
+        message: response.message || "Gagal mengambil data dashboard",
+      });
+    }
+    setIsLoading(false);
+  };
+
+  const records = dashboardData?.records || [];
+  const totalPages = Math.ceil(records.length / itemsPerPage);
+  const paginatedData = records.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const getStatusBadge = (presensi: string) => {
+    const status = presensi.toLowerCase();
+    switch (status) {
+      case "hadir":
+        return (
+          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+            Hadir
+          </Badge>
+        );
+      case "pulang":
+        return (
+          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+            Pulang
+          </Badge>
+        );
+      case "izin":
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+            Izin
+          </Badge>
+        );
+      case "sakit":
+        return (
+          <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
+            Sakit
+          </Badge>
+        );
+      default:
+        return <Badge variant="secondary">{presensi}</Badge>;
+    }
+  };
+
+  const stats = {
+    totalHadir: dashboardData?.statistik.hadir || 0,
+    totalTerlambat: dashboardData?.statistik.terlambat || 0,
+    totalIzin: dashboardData?.statistik.izin || 0,
+    totalSakit: dashboardData?.statistik.sakit || 0,
+    totalPulang: dashboardData?.statistik.pulang || 0,
+  };
+
+  const handlePrevMonth = () => {
+    if (selectedMonth === 0) {
+      setSelectedMonth(11);
+      setSelectedYear(selectedYear - 1);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
+    setCurrentPage(1);
+  };
+
+  const handleNextMonth = () => {
+    if (selectedMonth === 11) {
+      setSelectedMonth(0);
+      setSelectedYear(selectedYear + 1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+    setCurrentPage(1);
   };
 
   return (
@@ -85,42 +222,282 @@ const Dashboard = () => {
 
       <div className="min-h-screen bg-background p-4">
         <div className="max-w-4xl mx-auto">
-          <header className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-2xl font-bold">Dashboard</h1>
-              <p className="text-muted-foreground">Selamat datang kembali!</p>
+          <header className="flex flex-col gap-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold">Dashboard</h1>
+                <p className="text-muted-foreground">Riwayat presensi Anda</p>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={() => navigate("/")} className="flex">
+                  <ClipboardCheck className="h-4 w-4 md:mr-2 mr-1 " />
+                  Presensi
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                >
+                  <LogOut className="h-4 w-4 md:mr-2 mr-1" />
+                  {isLoggingOut ? "Logging out..." : "Logout"}
+                </Button>
+              </div>
             </div>
-            <Button variant="ghost" onClick={handleLogout} disabled={isLoggingOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              {isLoggingOut ? "Logging out..." : "Logout"}
-            </Button>
+
+            {/* Month Selector */}
+            <div className="flex items-center justify-between gap-2 md:justify-start">
+              <Button variant="outline" size="sm" onClick={handlePrevMonth}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="text-sm font-medium min-w-[150px] text-center">
+                {new Date(selectedYear, selectedMonth).toLocaleDateString(
+                  "id-ID",
+                  {
+                    month: "long",
+                    year: "numeric",
+                  }
+                )}
+              </div>
+              <Button variant="outline" size="sm" onClick={handleNextMonth}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-            <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/")}>
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="p-4 bg-primary/10 rounded-full">
-                  <ClipboardCheck className="h-8 w-8 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold">Presensi</h2>
-                  <p className="text-muted-foreground">Lakukan presensi harian</p>
-                </div>
+          {/* Statistics Cards */}
+          <Card
+            className={`hidden md:flex justify-around items-center gap-4 mb-6 p-4 ${
+              isLoading ? "opacity-50 pointer-events-none" : ""
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Calendar className="h-5 w-5 text-green-600" />
               </div>
-            </Card>
+              <div>
+                <p className="text-sm text-muted-foreground">Hadir</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {stats.totalHadir}
+                </p>
+              </div>
+            </div>
 
-            <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/overview")}>
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="p-4 bg-secondary/10 rounded-full">
-                  <BarChart3 className="h-8 w-8 text-secondary-foreground" />
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <FileText className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Izin</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {stats.totalIzin}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <StethoscopeIcon className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Sakit</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {stats.totalSakit}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Clock className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Terlambat</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {stats.totalTerlambat}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <HomeIcon className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pulang</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {stats.totalPulang}
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <Card
+            className={`md:hidden text-sm text-muted-foreground mb-6 p-4 flex items-center gap-3 w-full justify-between ${
+              isLoading ? "opacity-50 pointer-events-none" : ""
+            }`}
+          >
+            <div>Hadir : {stats.totalHadir}</div>
+            <div>Sakit : {stats.totalSakit}</div>
+            <div>Izin : {stats.totalIzin}</div>
+            <div>Terlambat : {stats.totalTerlambat}</div>
+            <div>Pulang : {stats.totalPulang}</div>
+          </Card>
+
+          {/* Presensi History */}
+          <Card
+            className={`p-6 transition ${
+              isLoading ? "opacity-50 pointer-events-none" : ""
+            }`}
+          >
+            {/* Desktop View */}
+            <div className="hidden md:block">
+              <div className="grid grid-cols-5 gap-4 pb-2 text-sm font-medium text-muted-foreground border-b mb-4">
+                <div>Tanggal</div>
+                <div>Status</div>
+                <div>Jam</div>
+                <div>Lokasi</div>
+                <div>Foto</div>
+              </div>
+              <div className="space-y-2">
+                {paginatedData.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Tidak ada data presensi untuk bulan ini
+                  </div>
+                ) : (
+                  paginatedData.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="grid grid-cols-5 gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="text-sm">
+                        {new Date(item.tanggal).toLocaleDateString("id-ID", {
+                          day: "2-digit",
+                          month: "short",
+                        })}
+                      </div>
+                      <div>{getStatusBadge(item.presensi)}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {item.jam}
+                      </div>
+                      <div className="flex flex-col text-sm text-muted-foreground truncate">
+                        <span className="truncate">{item.lokasi}</span>
+                        {item.maps && (
+                          <a
+                            href={item.maps}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline flex items-center gap-1"
+                          >
+                            <MapPin className="h-3 w-3" />
+                            Maps
+                          </a>
+                        )}
+                      </div>
+                      <div className="text-sm">
+                        {item.foto && (
+                          <a
+                            href={item.foto}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline flex items-center gap-1"
+                          >
+                            <Image className="h-3 w-3" />
+                            Lihat Foto
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Mobile View */}
+            <div className="md:hidden space-y-3">
+              {paginatedData.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Tidak ada data presensi untuk bulan ini
                 </div>
-                <div>
-                  <h2 className="text-xl font-semibold">Overview</h2>
-                  <p className="text-muted-foreground">Lihat riwayat presensi</p>
+              ) : (
+                paginatedData.map((item, idx) => (
+                  <div key={idx} className="p-3 border rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-3 items-center">
+                        <div className="text-sm">
+                          {new Date(item.tanggal).toLocaleDateString("id-ID", {
+                            day: "2-digit",
+                            month: "short",
+                          })}
+                        </div>
+                        -<span className="text-sm">{item.jam}</span>
+                      </div>
+                      {getStatusBadge(item.presensi)}
+                    </div>
+                    <div className="flex items-center justify-between"></div>
+                    <div className="flex gap-1 text-sm text-muted-foreground">
+                      <span className="truncate">{item.lokasi}</span>
+                      {item.maps && (
+                        <a
+                          href={item.maps}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline flex items-center gap-1"
+                        >
+                          <MapPin className="h-3 w-3" />
+                          Maps
+                        </a>
+                      )}
+                    </div>
+                    <div className="text-sm">
+                      {item.foto && (
+                        <a
+                          href={item.foto}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline flex items-center gap-1"
+                        >
+                          <Image className="h-3 w-3" />
+                          Lihat Foto
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Pagination */}
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                <div className="text-sm text-muted-foreground">
+                  Halaman {currentPage} dari {totalPages}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-            </Card>
-          </div>
+            )}
+          </Card>
         </div>
       </div>
     </>
