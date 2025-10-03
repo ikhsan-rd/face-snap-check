@@ -229,7 +229,12 @@ const Dashboard = () => {
                 <p className="text-muted-foreground">Riwayat presensi Anda</p>
               </div>
               <div className="flex gap-2">
-                <Button onClick={() => navigate("/")} className="flex">
+                <Button
+                  onClick={() => navigate("/")}
+                  className="flex"
+                  variant="default"
+                  size="sm"
+                >
                   <ClipboardCheck className="h-4 w-4 md:mr-2 mr-1 " />
                   Presensi
                 </Button>
@@ -237,9 +242,12 @@ const Dashboard = () => {
                   variant="outline"
                   onClick={handleLogout}
                   disabled={isLoggingOut}
+                  size="sm"
                 >
-                  <LogOut className="h-4 w-4 md:mr-2 mr-1" />
-                  {isLoggingOut ? "Logging out..." : "Logout"}
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden md:inline ml-2">
+                    {isLoggingOut ? "Logging out..." : "Logout"}
+                  </span>
                 </Button>
               </div>
             </div>
