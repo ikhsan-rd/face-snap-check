@@ -43,8 +43,10 @@ export const useCamera = (location?: string) => {
   useEffect(() => {
     async function startCamera() {
       try {
+        const ratio = eval(useRatio);
+
         streamRef.current = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", aspectRatio: Number(useRatio) },
+          video: { facingMode: "user", aspectRatio: ratio },
           audio: false,
         });
         if (videoRef.current) {
