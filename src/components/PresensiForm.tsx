@@ -34,7 +34,12 @@ export const PresensiForm = () => {
     id: "",
     nama: "",
     departemen: "",
-    tanggal: new Date().toLocaleDateString("en-CA"),
+    tanggalDisplay: new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }),
+    tanggal: new Date().toISOString(),
     jam: new Date().toLocaleTimeString("en-GB", { hour12: false }),
     presensi: "",
     longitude: "",
@@ -90,7 +95,11 @@ export const PresensiForm = () => {
     fetchUserData,
   } = useUserData();
 
-  const { userData, isDataChecked, setIsDataChecked: setGlobalDataChecked } = useUser();
+  const {
+    userData,
+    isDataChecked,
+    setIsDataChecked: setGlobalDataChecked,
+  } = useUser();
 
   // Real-time clock update
   useEffect(() => {
@@ -113,10 +122,10 @@ export const PresensiForm = () => {
   useEffect(() => {
     setIsLoggedIn(checkIsLoggedIn());
     setCurrentUser(getCurrentUser());
-    
+
     // Jika ada data user di global state, gunakan itu
     if (userData && isDataChecked) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         id: userData.id,
         nama: userData.nama,
@@ -132,7 +141,7 @@ export const PresensiForm = () => {
     const initializeFormData = async () => {
       // Only run if user is logged in and has user data from global context
       if (!userData || !isDataChecked) return;
-      
+
       // Skip if already has location data
       if (formData.lokasi) return;
 
@@ -142,11 +151,11 @@ export const PresensiForm = () => {
         // 1. Get location
         setLoadingMessage("Mendapatkan lokasi");
         const locationResult = await getLocationAndDecode();
-        
+
         // 2. Generate device identity
         setLoadingMessage("Membuat identitas perangkat");
         const deviceIdentity = await getDeviceIdentity();
-        
+
         // 3. Update form data
         setFormData((prev) => ({
           ...prev,
@@ -157,17 +166,16 @@ export const PresensiForm = () => {
           lokasi: locationResult.Flokasi,
           urlMaps: locationResult.FmapUrl,
         }));
-        
+
         setIsIdChecked(true);
         setIdNeedsRecheck(false);
-        
+
         setNotification({
           isOpen: true,
           type: "success",
           title: "Data Berhasil Diambil",
           message: "Data pengguna dan lokasi berhasil diperoleh.",
         });
-        
       } catch (error) {
         console.error("Failed to initialize form data:", error);
         let errorMessage = "Gagal mengambil data";
@@ -197,7 +205,12 @@ export const PresensiForm = () => {
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
-      tanggal: new Date().toLocaleDateString("en-CA"),
+      tanggalDisplay: new Date().toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }),
+      tanggal: new Date().toISOString(),
     }));
   }, []);
 
@@ -259,10 +272,10 @@ export const PresensiForm = () => {
 
       setIsIdChecked(true);
       setIdNeedsRecheck(false);
-      
+
       // Simpan juga ke global state
       setGlobalDataChecked(true);
-      
+
       setNotification({
         isOpen: true,
         type: "success",
@@ -299,7 +312,7 @@ export const PresensiForm = () => {
     setIsLoading(true);
     try {
       // 1. Upload foto dulu
-      const fileName = `${formData.id}-${formData.tanggal}-${formData.presensi}.jpg`;
+      const fileName = `${formData.id}-${formData.tanggalDisplay}-${formData.presensi}.jpg`;
 
       setLoadingMessage("Upload Foto");
       const uploadRes = await uploadPhoto(
@@ -359,7 +372,12 @@ export const PresensiForm = () => {
           id: "",
           nama: "",
           departemen: "",
-          tanggal: new Date().toLocaleDateString("en-CA"),
+          tanggalDisplay: new Date().toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          }),
+          tanggal: new Date().toISOString(),
           jam: new Date().toLocaleTimeString("en-GB", { hour12: false }),
           presensi: "",
           longitude: "",
@@ -398,7 +416,8 @@ export const PresensiForm = () => {
   const isFormValid = () => {
     if (!isIdChecked) return false;
     if (!formData.presensi || formData.presensi.trim() === "") return false;
-    if (!formData.lokasi || !formData.uuid || !formData.fingerprint) return false;
+    if (!formData.lokasi || !formData.uuid || !formData.fingerprint)
+      return false;
     return true;
   };
 
@@ -548,7 +567,7 @@ export const PresensiForm = () => {
                   Tanggal
                 </label>
                 <Input
-                  value={formData.tanggal}
+                  value={formData.tanggalDisplay}
                   readOnly
                   disabled={!isIdChecked || idNeedsRecheck}
                   className="bg-muted"
