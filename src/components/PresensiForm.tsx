@@ -136,16 +136,18 @@ export const PresensiForm = () => {
       // Skip if already has location data
       if (formData.lokasi) return;
 
+      setIsChecking(true);
+
       try {
+        // 1. Get location
         setLoadingMessage("Mendapatkan lokasi");
-        
-        // Get location
         const locationResult = await getLocationAndDecode();
         
-        // Generate device identity
+        // 2. Generate device identity
+        setLoadingMessage("Membuat identitas perangkat");
         const deviceIdentity = await getDeviceIdentity();
         
-        // Update form data
+        // 3. Update form data
         setFormData((prev) => ({
           ...prev,
           uuid: deviceIdentity.uuid,
@@ -156,10 +158,34 @@ export const PresensiForm = () => {
           urlMaps: locationResult.FmapUrl,
         }));
         
+        setIsIdChecked(true);
+        setIdNeedsRecheck(false);
+        
+        setNotification({
+          isOpen: true,
+          type: "success",
+          title: "Data Berhasil Diambil",
+          message: "Data pengguna dan lokasi berhasil diperoleh.",
+        });
+        
       } catch (error) {
         console.error("Failed to initialize form data:", error);
-        // Silently fail, user can still use the Cek button
+        let errorMessage = "Gagal mengambil data";
+        if (error instanceof Error) {
+          if (error.message.includes("Location")) {
+            errorMessage = `Gagal mendapatkan lokasi: ${error.message}`;
+          } else {
+            errorMessage = error.message;
+          }
+        }
+        setNotification({
+          isOpen: true,
+          type: "error",
+          title: "Gagal Mengambil Data",
+          message: errorMessage,
+        });
       } finally {
+        setIsChecking(false);
         setLoadingMessage("");
       }
     };
@@ -370,8 +396,9 @@ export const PresensiForm = () => {
 
   // Validation logic
   const isFormValid = () => {
-    // if (!isIdChecked) return false;
-    // if (!formData.presensi || formData.presensi.trim() === "") return false;
+    if (!isIdChecked) return false;
+    if (!formData.presensi || formData.presensi.trim() === "") return false;
+    if (!formData.lokasi || !formData.uuid || !formData.fingerprint) return false;
     return true;
   };
 
