@@ -11,7 +11,6 @@ import {
 import { useUser } from "@/contexts/UserContext";
 import {
   ClipboardCheck,
-  BarChart3,
   LogOut,
   ChevronRight,
   ChevronLeft,
@@ -27,15 +26,8 @@ import {
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { NotificationDialog } from "@/components/NotificationDialog";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
+
 import { Loader2 } from "lucide-react";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { Progress } from "@/components/ui/progress";
 
 const Dashboard = () => {
   const navigate = useNavigate();
