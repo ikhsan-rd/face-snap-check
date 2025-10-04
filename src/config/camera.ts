@@ -7,5 +7,5 @@
  */
 
 // src/config/ratio.ts
-export const useRatioMobile = "4/5";
-export const useRatioDesktop = "5/4";
+export const useRatioMobile = "5/4";
+export const useRatioDesktop = "4/5";

@@ -267,7 +267,32 @@ export const PresensiForm = () => {
         photoFileUrl: photoData.fileUrl,
       });
 
-      console.log(response);
+      // 2. Fake submit (cek tipe data semua field)
+      // const fakePayload = {
+      //   id: formData.id,
+      //   nama: formData.nama,
+      //   departemen: formData.departemen,
+      //   presensi: formData.presensi,
+      //   tanggal: formData.tanggal,
+      //   jam: formData.jam,
+      //   lokasi: formData.lokasi,
+      //   urlMaps: formData.urlMaps,
+      //   latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
+      //   longitude: formData.longitude
+      //     ? parseFloat(formData.longitude)
+      //     : undefined,
+      //   fingerprint: formData.fingerprint,
+      //   photoFileName: photoData.fileName,
+      //   photoFileUrl: photoData.fileUrl,
+      // };
+
+      console.log("=== Fake Submit Payload ===");
+      Object.entries(response).forEach(([key, value]) => {
+        console.log(`${key}:`, value, "| type:", typeof value);
+      });
+
+      // langsung return seolah sukses tanpa kirim ke server
+      // const response = { success: true, message: "Fake submit success!" };
 
       // 3. Notifikasi
       if (response.success) {

@@ -67,7 +67,7 @@ export const CameraModal = ({
               src={imageUrl}
               alt="Captured"
               loading="lazy"
-              className="left-0 right-0 rounded-lg w-full h-full object-cover scale-x-[-1]"
+              className="left-0 right-0 rounded-lg w-full h-full object-cover"
             />
           ) : (
             <>
