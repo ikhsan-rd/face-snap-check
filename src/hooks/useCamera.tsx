@@ -224,20 +224,16 @@ export const useCamera = (location?: string) => {
     if (!ctx) return;
 
     // === Gambar video ===
-    if (!isMobile) {
-      ctx.save();
-      ctx.scale(-1, 1);
-      ctx.drawImage(
-        video,
-        -captureCanvas.width,
-        0,
-        captureCanvas.width,
-        captureCanvas.height
-      );
-      ctx.restore(); // reset biar teks tidak ikut mirror
-    } else {
-      ctx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-    }
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(
+      video,
+      -captureCanvas.width,
+      0,
+      captureCanvas.width,
+      captureCanvas.height
+    );
+    ctx.restore(); // reset biar teks tidak ikut mirror
 
     // === Overlay teks ===
     const currentTime = new Date().toLocaleString("id-ID");
