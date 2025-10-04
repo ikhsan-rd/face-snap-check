@@ -127,6 +127,46 @@ export const PresensiForm = () => {
     }
   }, [userData, isDataChecked]);
 
+  // Auto-fetch location, UUID, and fingerprint when logged in user visits the form
+  useEffect(() => {
+    const initializeFormData = async () => {
+      // Only run if user is logged in and has user data from global context
+      if (!userData || !isDataChecked) return;
+      
+      // Skip if already has location data
+      if (formData.lokasi) return;
+
+      try {
+        setLoadingMessage("Mendapatkan lokasi");
+        
+        // Get location
+        const locationResult = await getLocationAndDecode();
+        
+        // Generate device identity
+        const deviceIdentity = await getDeviceIdentity();
+        
+        // Update form data
+        setFormData((prev) => ({
+          ...prev,
+          uuid: deviceIdentity.uuid,
+          fingerprint: deviceIdentity.fingerprint,
+          latitude: locationResult.Flatitude,
+          longitude: locationResult.Flongitude,
+          lokasi: locationResult.Flokasi,
+          urlMaps: locationResult.FmapUrl,
+        }));
+        
+      } catch (error) {
+        console.error("Failed to initialize form data:", error);
+        // Silently fail, user can still use the Cek button
+      } finally {
+        setLoadingMessage("");
+      }
+    };
+
+    initializeFormData();
+  }, [userData, isDataChecked]);
+
   // Auto-set date
   useEffect(() => {
     setFormData((prev) => ({
