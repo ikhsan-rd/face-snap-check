@@ -308,11 +308,13 @@ const Dashboard = () => {
           </header>
 
           <div className="hidden md:grid md:grid-cols-[25%,auto] gap-4 mb-6 w-full">
-            <Card className="flex flex-col justify-center p-4 text-sm text-muted-foreground">
-              <p>{dataDiri.id}</p>
-              <p>{dataDiri.nama}</p>
-              <p>{dataDiri.departemen}</p>
-            </Card>
+            {dataDiri && !Array.isArray(dataDiri) && (
+              <Card className="flex flex-col justify-center p-4 text-sm text-muted-foreground">
+                <p>{dataDiri.id}</p>
+                <p>{dataDiri.nama}</p>
+                <p>{dataDiri.departemen}</p>
+              </Card>
+            )}
 
             <Card
               className={`flex justify-between gap-4 p-4 ${
@@ -391,11 +393,13 @@ const Dashboard = () => {
               isLoading ? "opacity-50 pointer-events-none" : ""
             }`}
           >
-            <div className="flex flex-wrap text-sm text-muted-foreground gap-4 pb-2 border-b">
-              <p className="text-sm">{dataDiri.id}</p>
-              <p className="text-sm">{dataDiri.nama}</p>
-              <p className="text-sm">{dataDiri.departemen}</p>
-            </div>
+            {dataDiri && !Array.isArray(dataDiri) && (
+              <div className="flex flex-wrap text-sm text-muted-foreground gap-4 pb-2 border-b">
+                <p className="text-sm">{dataDiri.id}</p>
+                <p className="text-sm">{dataDiri.nama}</p>
+                <p className="text-sm">{dataDiri.departemen}</p>
+              </div>
+            )}
             <div className="flex flex-wrap gap-3 justify-between pt-2">
               <div>Hadir : {stats.totalHadir}</div>
               <div>Sakit : {stats.totalSakit}</div>
