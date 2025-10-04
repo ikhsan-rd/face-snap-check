@@ -8,6 +8,7 @@ import {
   getCurrentUser,
   logoutUser,
 } from "@/services/api";
+import { useUser } from "@/contexts/UserContext";
 import {
   ClipboardCheck,
   BarChart3,
@@ -38,6 +39,7 @@ import { Progress } from "@/components/ui/progress";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { setUserData, setIsDataChecked, clearUserData } = useUser();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [currentPage, setCurrentPage] = useState(1);
@@ -81,6 +83,7 @@ const Dashboard = () => {
           title: "Logout Berhasil",
           message: "Anda telah logout dari sistem",
         });
+        clearUserData();
         localStorage.removeItem("user_data");
         localStorage.removeItem("is_logged_in");
         navigate("/");
@@ -101,6 +104,7 @@ const Dashboard = () => {
         message:
           "Sesi lokal dihapus, tapi mungkin tidak tersinkronisasi dengan server.",
       });
+      clearUserData();
       localStorage.removeItem("user_data");
       localStorage.removeItem("is_logged_in");
       navigate("/");
@@ -131,6 +135,17 @@ const Dashboard = () => {
 
     if (response.success && response.data) {
       setDashboardData(response.data);
+      
+      // Simpan data user ke global state
+      if (response.data.dataDiri) {
+        const dataDiri = response.data.dataDiri;
+        setUserData({
+          id: dataDiri.id,
+          nama: dataDiri.nama,
+          departemen: dataDiri.departemen,
+        });
+        setIsDataChecked(true);
+      }
     } else {
       setNotification({
         isOpen: true,
@@ -142,7 +157,7 @@ const Dashboard = () => {
     setIsLoading(false);
   };
 
-  const dataDiri = dashboardData?.dataDiri || [];
+  const dataDiri = dashboardData?.dataDiri;
   const records = dashboardData?.records || [];
   const totalPages = Math.ceil(records.length / itemsPerPage);
   const paginatedData = records.slice(

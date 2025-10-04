@@ -27,6 +27,7 @@ import { useCamera } from "@/hooks/useCamera";
 import { useLocation } from "@/hooks/useLocation";
 import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
 import { useUserData } from "@/hooks/useUserData";
+import { useUser } from "@/contexts/UserContext";
 
 export const PresensiForm = () => {
   const [formData, setFormData] = useState({
@@ -89,6 +90,8 @@ export const PresensiForm = () => {
     fetchUserData,
   } = useUserData();
 
+  const { userData, isDataChecked, setIsDataChecked: setGlobalDataChecked } = useUser();
+
   // Real-time clock update
   useEffect(() => {
     const interval = setInterval(() => {
@@ -106,11 +109,23 @@ export const PresensiForm = () => {
     setCurrentUser(getCurrentUser());
   }, []);
 
-  // Check login status on component mount
+  // Check login status on component mount and load global user data
   useEffect(() => {
     setIsLoggedIn(checkIsLoggedIn());
     setCurrentUser(getCurrentUser());
-  }, []);
+    
+    // Jika ada data user di global state, gunakan itu
+    if (userData && isDataChecked) {
+      setFormData(prev => ({
+        ...prev,
+        id: userData.id,
+        nama: userData.nama,
+        departemen: userData.departemen,
+      }));
+      setIsIdChecked(true);
+      setIdNeedsRecheck(false);
+    }
+  }, [userData, isDataChecked]);
 
   // Auto-set date
   useEffect(() => {
@@ -178,6 +193,10 @@ export const PresensiForm = () => {
 
       setIsIdChecked(true);
       setIdNeedsRecheck(false);
+      
+      // Simpan juga ke global state
+      setGlobalDataChecked(true);
+      
       setNotification({
         isOpen: true,
         type: "success",
