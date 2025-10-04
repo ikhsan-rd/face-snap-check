@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom"; // +
+import { useNavigate } from "react-router-dom";
 import {
   isLoggedIn as checkIsLoggedIn,
   getCurrentUser,
@@ -14,14 +13,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import {
   Camera as CameraIcon,
-  Check,
-  Trash2,
   RefreshCw,
   Eye,
   LogIn,
   Home,
-  Send,
-  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingScreen } from "./LoadingScreen";
@@ -52,12 +47,9 @@ export const PresensiForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
 
-  const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
-  const [showLoginAfterSubmit, setShowLoginAfterSubmit] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const [notification, setNotification] = useState<{
     isOpen: boolean;
@@ -85,7 +77,6 @@ export const PresensiForm = () => {
     mode,
   } = useCamera(formData.lokasi);
 
-  // +
   const { getLocationAndDecode } = useLocation();
   const { getDeviceIdentity } = useDeviceIdentity();
   const {
@@ -110,7 +101,6 @@ export const PresensiForm = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // +
   useEffect(() => {
     setIsLoggedIn(checkIsLoggedIn());
     setCurrentUser(getCurrentUser());
@@ -178,7 +168,6 @@ export const PresensiForm = () => {
         departemen: userData.departemen,
         uuid: deviceIdentity.uuid,
         fingerprint: deviceIdentity.fingerprint,
-        //+
         latitude: locationResult.Flatitude,
         longitude: locationResult.Flongitude,
         lokasi: locationResult.Flokasi,
@@ -267,32 +256,10 @@ export const PresensiForm = () => {
         photoFileUrl: photoData.fileUrl,
       });
 
-      // 2. Fake submit (cek tipe data semua field)
-      // const fakePayload = {
-      //   id: formData.id,
-      //   nama: formData.nama,
-      //   departemen: formData.departemen,
-      //   presensi: formData.presensi,
-      //   tanggal: formData.tanggal,
-      //   jam: formData.jam,
-      //   lokasi: formData.lokasi,
-      //   urlMaps: formData.urlMaps,
-      //   latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
-      //   longitude: formData.longitude
-      //     ? parseFloat(formData.longitude)
-      //     : undefined,
-      //   fingerprint: formData.fingerprint,
-      //   photoFileName: photoData.fileName,
-      //   photoFileUrl: photoData.fileUrl,
-      // };
-
       console.log("=== Fake Submit Payload ===");
       Object.entries(response).forEach(([key, value]) => {
         console.log(`${key}:`, value, "| type:", typeof value);
       });
-
-      // langsung return seolah sukses tanpa kirim ke server
-      // const response = { success: true, message: "Fake submit success!" };
 
       // 3. Notifikasi
       if (response.success) {

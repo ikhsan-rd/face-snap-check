@@ -21,6 +21,7 @@ import {
   StethoscopeIcon,
   FileText,
   Calendar,
+  RefreshCcw,
 } from "lucide-react";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { NotificationDialog } from "@/components/NotificationDialog";
@@ -141,6 +142,7 @@ const Dashboard = () => {
     setIsLoading(false);
   };
 
+  const dataDiri = dashboardData?.dataDiri || [];
   const records = dashboardData?.records || [];
   const totalPages = Math.ceil(records.length / itemsPerPage);
   const paginatedData = records.slice(
@@ -224,19 +226,20 @@ const Dashboard = () => {
         <div className="max-w-4xl mx-auto">
           <header className="flex flex-col gap-4 mb-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold">Dashboard</h1>
-                <p className="text-muted-foreground">Riwayat presensi Anda</p>
+              <div className="">
+                <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
+                <p className="text-muted-foreground hidden sm:block">
+                  Riwayat presensi Anda
+                </p>
               </div>
               <div className="flex gap-2">
                 <Button
                   onClick={() => navigate("/")}
-                  className="flex"
                   variant="default"
                   size="sm"
                 >
-                  <ClipboardCheck className="h-4 w-4 md:mr-2 mr-1 " />
-                  Presensi
+                  <ClipboardCheck className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-2">Presensi</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -253,11 +256,11 @@ const Dashboard = () => {
             </div>
 
             {/* Month Selector */}
-            <div className="flex items-center justify-between gap-2 md:justify-start">
+            <div className="flex items-center justify-between md:gap-12 md:justify-start">
               <Button variant="outline" size="sm" onClick={handlePrevMonth}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div className="text-sm font-medium min-w-[150px] text-center">
+              <div className="text-sm font-medium text-center">
                 {new Date(selectedYear, selectedMonth).toLocaleDateString(
                   "id-ID",
                   {
@@ -266,89 +269,129 @@ const Dashboard = () => {
                   }
                 )}
               </div>
-              <Button variant="outline" size="sm" onClick={handleNextMonth}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleNextMonth}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadDashboardData}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <RefreshCcw className="h-4 w-4" />
+                    </>
+                  )}
+                  <span className="hidden md:inline ml-2">Refresh</span>
+                </Button>
+              </div>
             </div>
           </header>
 
-          {/* Statistics Cards */}
+          <div className="hidden md:grid md:grid-cols-[25%,auto] gap-4 mb-6 w-full">
+            {dataDiri && !Array.isArray(dataDiri) && (
+              <Card className="flex flex-col justify-center p-4 text-sm text-muted-foreground">
+                <p>{dataDiri.id}</p>
+                <p>{dataDiri.nama}</p>
+                <p>{dataDiri.departemen}</p>
+              </Card>
+            )}
+
+            <Card
+              className={`flex justify-between gap-4 p-4 ${
+                isLoading ? "opacity-50 pointer-events-none" : ""
+              }`}
+            >
+              {/* Hadir */}
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Calendar className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Hadir</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {stats.totalHadir}
+                  </p>
+                </div>
+              </div>
+
+              {/* Izin */}
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <FileText className="h-5 w-5 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Izin</p>
+                  <p className="text-2xl font-bold text-orange-600">
+                    {stats.totalIzin}
+                  </p>
+                </div>
+              </div>
+
+              {/* Sakit */}
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <StethoscopeIcon className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Sakit</p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {stats.totalSakit}
+                  </p>
+                </div>
+              </div>
+
+              {/* Terlambat */}
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <Clock className="h-5 w-5 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Terlambat</p>
+                  <p className="text-2xl font-bold text-yellow-600">
+                    {stats.totalTerlambat}
+                  </p>
+                </div>
+              </div>
+
+              {/* Pulang */}
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <HomeIcon className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Pulang</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {stats.totalPulang}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
           <Card
-            className={`hidden md:flex justify-around items-center gap-4 mb-6 p-4 ${
+            className={`md:hidden text-sm text-muted-foreground mb-6 p-4 w-full ${
               isLoading ? "opacity-50 pointer-events-none" : ""
             }`}
           >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Calendar className="h-5 w-5 text-green-600" />
+            {dataDiri && !Array.isArray(dataDiri) && (
+              <div className="flex flex-wrap text-sm text-muted-foreground gap-4 pb-2 border-b">
+                <p className="text-sm">{dataDiri.id}</p>
+                <p className="text-sm">{dataDiri.nama}</p>
+                <p className="text-sm">{dataDiri.departemen}</p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Hadir</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {stats.totalHadir}
-                </p>
-              </div>
+            )}
+            <div className="flex flex-wrap gap-3 justify-between pt-2">
+              <div>Hadir : {stats.totalHadir}</div>
+              <div>Sakit : {stats.totalSakit}</div>
+              <div>Izin : {stats.totalIzin}</div>
+              <div>Terlambat : {stats.totalTerlambat}</div>
+              <div>Pulang : {stats.totalPulang}</div>
             </div>
-
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <FileText className="h-5 w-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Izin</p>
-                <p className="text-2xl font-bold text-orange-600">
-                  {stats.totalIzin}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <StethoscopeIcon className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Sakit</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {stats.totalSakit}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="h-5 w-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Terlambat</p>
-                <p className="text-2xl font-bold text-yellow-600">
-                  {stats.totalTerlambat}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <HomeIcon className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pulang</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {stats.totalPulang}
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card
-            className={`md:hidden text-sm text-muted-foreground mb-6 p-4 flex items-center gap-3 w-full justify-between ${
-              isLoading ? "opacity-50 pointer-events-none" : ""
-            }`}
-          >
-            <div>Hadir : {stats.totalHadir}</div>
-            <div>Sakit : {stats.totalSakit}</div>
-            <div>Izin : {stats.totalIzin}</div>
-            <div>Terlambat : {stats.totalTerlambat}</div>
-            <div>Pulang : {stats.totalPulang}</div>
           </Card>
 
           {/* Presensi History */}
@@ -359,14 +402,15 @@ const Dashboard = () => {
           >
             {/* Desktop View */}
             <div className="hidden md:block">
-              <div className="grid grid-cols-5 gap-4 pb-2 text-sm font-medium text-muted-foreground border-b mb-4">
+              <div className="grid grid-cols-[10%,10%,10%,40%,10%,10%] gap-4 pb-2 text-sm font-medium text-muted-foreground border-b mb-4">
                 <div>Tanggal</div>
                 <div>Status</div>
                 <div>Jam</div>
                 <div>Lokasi</div>
+                <div>Maps</div>
                 <div>Foto</div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 border-b">
                 {paginatedData.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     Tidak ada data presensi untuk bulan ini
@@ -375,7 +419,7 @@ const Dashboard = () => {
                   paginatedData.map((item, idx) => (
                     <div
                       key={idx}
-                      className="grid grid-cols-5 gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                      className="grid text-start grid-cols-[10%,10%,10%,42%,10%,10%] gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
                     >
                       <div className="text-sm">
                         {new Date(item.tanggal).toLocaleDateString("id-ID", {
@@ -389,6 +433,8 @@ const Dashboard = () => {
                       </div>
                       <div className="flex flex-col text-sm text-muted-foreground truncate">
                         <span className="truncate">{item.lokasi}</span>
+                      </div>
+                      <div className="text-sm">
                         {item.maps && (
                           <a
                             href={item.maps}
@@ -410,7 +456,7 @@ const Dashboard = () => {
                             className="text-primary hover:underline flex items-center gap-1"
                           >
                             <Image className="h-3 w-3" />
-                            Lihat Foto
+                            Foto
                           </a>
                         )}
                       </div>
@@ -428,22 +474,24 @@ const Dashboard = () => {
                 </div>
               ) : (
                 paginatedData.map((item, idx) => (
-                  <div key={idx} className="p-3 border rounded-lg space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex gap-3 items-center">
+                  <div key={idx} className="p-2 border-b space-y-2">
+                    <div className="flex flex-wrap gap-3 items-center justify-between">
+                      <div className="flex flex-wrap gap-3 items-center">
                         <div className="text-sm">
                           {new Date(item.tanggal).toLocaleDateString("id-ID", {
                             day: "2-digit",
                             month: "short",
                           })}
                         </div>
-                        -<span className="text-sm">{item.jam}</span>
+                        <span className="text-sm hidden sm:block">-</span>
+                        <span className="text-sm">{item.jam}</span>
                       </div>
                       {getStatusBadge(item.presensi)}
                     </div>
-                    <div className="flex items-center justify-between"></div>
-                    <div className="flex gap-1 text-sm text-muted-foreground">
-                      <span className="truncate">{item.lokasi}</span>
+                    <div className="flex flex-wrap sm:flex-nowrap gap-3 text-sm">
+                      <span className="text-muted-foreground truncate">
+                        {item.lokasi}
+                      </span>
                       {item.maps && (
                         <a
                           href={item.maps}
@@ -455,8 +503,6 @@ const Dashboard = () => {
                           Maps
                         </a>
                       )}
-                    </div>
-                    <div className="text-sm">
                       {item.foto && (
                         <a
                           href={item.foto}
@@ -465,7 +511,7 @@ const Dashboard = () => {
                           className="text-primary hover:underline flex items-center gap-1"
                         >
                           <Image className="h-3 w-3" />
-                          Lihat Foto
+                          Foto
                         </a>
                       )}
                     </div>
@@ -477,7 +523,7 @@ const Dashboard = () => {
             {/* Pagination */}
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <div className="flex items-center justify-between mt-6 pt-4">
                 <div className="text-sm text-muted-foreground">
                   Halaman {currentPage} dari {totalPages}
                 </div>

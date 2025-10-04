@@ -18,6 +18,11 @@ export interface PresensiRecord {
 
 export interface DashboardData {
   bulan: string;
+  dataDiri: {
+    id: string;
+    nama: string;
+    departemen: string;
+  };
   records: PresensiRecord[];
   statistik: {
     hadir: number;
