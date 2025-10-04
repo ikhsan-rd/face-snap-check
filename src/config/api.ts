@@ -8,7 +8,7 @@
 // 5. Click Deploy and copy the web app URL
 
 export const API_KEY =
-  "AKfycbynUK5cn6cVZmJh4vR7c6hf6wCHiTxyqatXWzr0ooz-_8SPsBgY9HpLt3aDeA-pLFrOMQ";
+  "AKfycbwc6G4msVbZbLIWS-znhaqTNv6WVeduQUjWpMqdftgwbQRc9opUqvg7TqEB5Y5WLz478w";
 
 export const APPS_SCRIPT_URL = `https://script.google.com/macros/s/${API_KEY}/exec`;
 
