@@ -341,6 +341,7 @@ export const PresensiForm = () => {
         nama: formData.nama,
         departemen: formData.departemen,
         presensi: formData.presensi,
+        tanggalDisplay: formData.tanggalDisplay,
         tanggal: formData.tanggal,
         jam: formData.jam,
         lokasi: formData.lokasi,
