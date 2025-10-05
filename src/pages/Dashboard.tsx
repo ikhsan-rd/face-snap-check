@@ -57,7 +57,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!currentUser) {
-      navigate("/");
+      navigate("/login");
     }
   }, [currentUser, navigate]);
 
@@ -76,12 +76,12 @@ const Dashboard = () => {
     });
     clearUserData();
     setIsLoggingOut(false);
-    navigate("/");
+    navigate("/login");
   };
 
   useEffect(() => {
     if (!currentUser) {
-      navigate("/");
+      navigate("/login");
       return;
     }
 
@@ -215,7 +215,7 @@ const Dashboard = () => {
               </div>
               <div className="flex gap-2">
                 <Button
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate("/presensi")}
                   variant="default"
                   size="sm"
                 >

@@ -71,7 +71,7 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
         onLogin({ email: credentials.id, password: credentials.password });
         setCredentials({ id: "", password: "" });
         onClose();
-        navigate("/dashboard");
+        navigate("/");
       } else {
         setNotification({
           isOpen: true,
@@ -168,7 +168,7 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
           setIdExists(null);
           setFoundUserData(null);
           onClose();
-          navigate("/dashboard");
+          navigate("/");
         }
       } else {
         setNotification({

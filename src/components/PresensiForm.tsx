@@ -460,7 +460,7 @@ export const PresensiForm = () => {
                 {isLoggedIn ? (
                   <Button
                     variant="outline"
-                    onClick={() => navigate("/dashboard")}
+                    onClick={() => navigate("/")}
                     className="py-6 text-lg font-medium"
                   >
                     <Home className="h-4 w-4" />

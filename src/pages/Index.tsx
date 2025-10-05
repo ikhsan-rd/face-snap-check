@@ -1,7 +1,7 @@
-import { PresensiForm } from "@/components/PresensiForm";
+import Dashboard from "./Dashboard";
 
 const Index = () => {
-  return <PresensiForm />;
+  return <Dashboard />;
 };
 
 export default Index;
