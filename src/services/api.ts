@@ -39,21 +39,12 @@ export interface ApiResponse<T = any> {
   data?: T;
 }
 
-// Generate UUID for device identification
-function generateUUID(): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0;
-    const v = c == "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-// Get or create device UUID
+// Get device UUID from localStorage (managed by useDeviceIdentity hook)
 export function getDeviceUUID(): string {
-  let uuid = localStorage.getItem("device_uuid");
+  let uuid = localStorage.getItem("deviceUUID");
   if (!uuid) {
-    uuid = generateUUID();
-    localStorage.setItem("device_uuid", uuid);
+    uuid = crypto.randomUUID();
+    localStorage.setItem("deviceUUID", uuid);
   }
   return uuid;
 }
