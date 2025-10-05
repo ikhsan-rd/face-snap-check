@@ -142,9 +142,6 @@ export const PresensiForm = () => {
       // Only run if user is logged in and has user data from global context
       if (!userData || !isDataChecked) return;
 
-      // Skip if already has location data
-      if (formData.lokasi) return;
-
       setIsChecking(true);
 
       try {
