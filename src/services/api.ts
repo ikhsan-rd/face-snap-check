@@ -181,13 +181,13 @@ export async function logoutUser(userId: string): Promise<ApiResponse> {
     });
     const data = await response.json();
 
-    if (data.success) {
-      localStorage.removeItem("user_data");
-      localStorage.removeItem("is_logged_in");
-    }
+    // Backend selalu berhasil, jadi selalu clear session
+    clearUserSession();
 
     return data;
   } catch (error) {
+    // Tetap clear session meskipun error
+    clearUserSession();
     return {
       success: false,
       message: "Gagal logout: " + (error as Error).message,
@@ -296,4 +296,7 @@ export function getCurrentUser(): User | null {
 export function clearUserSession(): void {
   localStorage.removeItem("user_data");
   localStorage.removeItem("is_logged_in");
+  localStorage.removeItem("deviceUUID");
+  localStorage.removeItem("userData");
+  localStorage.removeItem("isDataChecked");
 }

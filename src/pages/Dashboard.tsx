@@ -67,42 +67,16 @@ const Dashboard = () => {
     setIsLoggingOut(true);
     const response = await logoutUser(currentUser.id);
 
-    try {
-      if (response.success) {
-        setNotification({
-          isOpen: true,
-          type: "success",
-          title: "Logout Berhasil",
-          message: "Anda telah logout dari sistem",
-        });
-        clearUserData();
-        localStorage.removeItem("user_data");
-        localStorage.removeItem("is_logged_in");
-        navigate("/");
-      } else {
-        setNotification({
-          isOpen: true,
-          type: "error",
-          title: "Logout Gagal",
-          message: response.message || "Gagal logout dari server",
-        });
-      }
-    } catch (error) {
-      console.error("Logout error:", error);
-      setNotification({
-        isOpen: true,
-        type: "error",
-        title: "Logout Lokal",
-        message:
-          "Sesi lokal dihapus, tapi mungkin tidak tersinkronisasi dengan server.",
-      });
-      clearUserData();
-      localStorage.removeItem("user_data");
-      localStorage.removeItem("is_logged_in");
-      navigate("/");
-    } finally {
-      setIsLoggingOut(false);
-    }
+    // Backend selalu berhasil, jadi selalu clear state dan navigate
+    setNotification({
+      isOpen: true,
+      type: "success",
+      title: "Logout Berhasil",
+      message: response.message || "Anda telah logout dari sistem",
+    });
+    clearUserData();
+    setIsLoggingOut(false);
+    navigate("/");
   };
 
   useEffect(() => {

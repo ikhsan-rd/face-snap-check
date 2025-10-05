@@ -46,8 +46,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const clearUserData = () => {
     setUserData(null);
     setIsDataChecked(false);
-    localStorage.removeItem('userData');
-    localStorage.removeItem('isDataChecked');
+    // Semua localStorage dibersihkan oleh clearUserSession di api.ts
   };
 
   return (
