@@ -170,8 +170,9 @@ const Dashboard = () => {
     setIsShowData((prev) => !prev);
   };
 
-  const handleLogoutClick = () => {
-    logoutUserGlobal();
+  const handleLogoutClick = async () => {
+    setLogoutDialogOpen(false);
+    await logoutUserGlobal();
   };
 
   return (

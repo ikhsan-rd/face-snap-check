@@ -348,8 +348,9 @@ export const PresensiForm = () => {
   const isCameraEnabled = () => isFormValid();
   const isSubmitEnabled = () => isFormValid() && capturedImage;
 
-  const handleLogoutClick = () => {
-    logoutUserGlobal();
+  const handleLogoutClick = async () => {
+    setLogoutDialogOpen(false);
+    await logoutUserGlobal();
   };
 
   return (
