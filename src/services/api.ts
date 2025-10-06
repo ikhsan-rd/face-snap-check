@@ -154,7 +154,7 @@ export async function loginUser(
     const data = await response.json();
 
     if (data.success) {
-      localStorage.setItem("user_data", JSON.stringify(data.data));
+      localStorage.setItem("userData", JSON.stringify(data.data));
       localStorage.setItem("is_logged_in", "true");
     }
 
@@ -297,6 +297,5 @@ export function clearUserSession(): void {
   localStorage.removeItem("user_data");
   localStorage.removeItem("is_logged_in");
   localStorage.removeItem("deviceUUID");
-  localStorage.removeItem("userData");
   localStorage.removeItem("isDataChecked");
 }

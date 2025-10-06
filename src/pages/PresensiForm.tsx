@@ -17,12 +17,13 @@ import {
   Eye,
   LogIn,
   Home,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { LoadingScreen } from "./LoadingScreen";
-import { LoginModal } from "./LoginModal";
-import { CameraModal } from "./CameraModal";
-import { NotificationDialog } from "./NotificationDialog";
+import { LoadingScreen } from "@/components/LoadingScreen";
+import { LoginModal } from "@/components/LoginModal";
+import { CameraModal } from "@/components/CameraModal";
+import { NotificationDialog } from "@/components/NotificationDialog";
 import { useCamera } from "@/hooks/useCamera";
 import { useLocation } from "@/hooks/useLocation";
 import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
@@ -458,19 +459,31 @@ export const PresensiForm = () => {
             <div className="space-y-2">
               <div className="flex justify-start">
                 {isLoggedIn ? (
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate("/")}
-                    className="py-6 text-lg font-medium"
-                  >
-                    <Home className="h-4 w-4" />
-                    Dashboard
-                  </Button>
+                  <div>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate("/")}
+                      size="sm"
+                    >
+                      <Home className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      size="sm"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span className="hidden md:inline ml-2">
+                        {isLoggingOut ? "Logging out..." : "Logout"}
+                      </span>
+                    </Button>
+                  </div>
                 ) : (
                   <Button
                     variant="outline"
                     onClick={() => setLoginModalOpen(true)}
-                    className="py-6 text-lg font-medium"
+                    size="sm"
                   >
                     <LogIn className="h-4 w-4" />
                     Login

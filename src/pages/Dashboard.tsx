@@ -31,7 +31,7 @@ import { Loader2 } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { setUserData, setIsDataChecked, clearUserData } = useUser();
+  const { setIsDataChecked, clearUserData } = useUser();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [currentPage, setCurrentPage] = useState(1);
@@ -81,7 +81,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!currentUser) {
-      navigate("/login");
+      navigate("/presensi");
       return;
     }
 
@@ -101,17 +101,6 @@ const Dashboard = () => {
 
     if (response.success && response.data) {
       setDashboardData(response.data);
-
-      // Simpan data user ke global state
-      if (response.data.dataDiri) {
-        const dataDiri = response.data.dataDiri;
-        setUserData({
-          id: dataDiri.id,
-          nama: dataDiri.nama,
-          departemen: dataDiri.departemen,
-        });
-        setIsDataChecked(true);
-      }
     } else {
       setNotification({
         isOpen: true,
