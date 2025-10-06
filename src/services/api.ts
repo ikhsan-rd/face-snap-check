@@ -232,7 +232,6 @@ export async function submitPresensi(presensiData: {
   nama: string;
   departemen: string;
   presensi: string;
-  tanggalDisplay: string;
   tanggal: string;
   jam: string;
   lokasi: string;

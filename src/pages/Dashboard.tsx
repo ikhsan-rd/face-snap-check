@@ -22,6 +22,10 @@ import {
   FileText,
   Calendar,
   RefreshCcw,
+  EyeClosedIcon,
+  EyeIcon,
+  LucideEyeOff,
+  LucideEye,
 } from "lucide-react";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { NotificationDialog } from "@/components/NotificationDialog";
@@ -36,6 +40,7 @@ const Dashboard = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [isShowData, setIsShowData] = useState(true);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null
   );
@@ -57,7 +62,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!currentUser) {
-      navigate("/login");
+      navigate("/presensi");
     }
   }, [currentUser, navigate]);
 
@@ -76,7 +81,7 @@ const Dashboard = () => {
     });
     clearUserData();
     setIsLoggingOut(false);
-    navigate("/login");
+    navigate("/presensi");
   };
 
   useEffect(() => {
@@ -180,6 +185,10 @@ const Dashboard = () => {
     setCurrentPage(1);
   };
 
+  const handleShowData = () => {
+    setIsShowData((prev) => !prev);
+  };
+
   return (
     <>
       <LoadingScreen isOpen={isLoggingOut} message="Logout..." />
@@ -195,9 +204,9 @@ const Dashboard = () => {
       <div className="min-h-screen bg-background p-4">
         <div className="max-w-4xl mx-auto">
           <header className="flex flex-col gap-4 mb-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between">
               <div className="">
-                <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
+                <h1 className="text-2xl font-bold">Dashboard</h1>
                 <p className="text-muted-foreground hidden sm:block">
                   Riwayat presensi Anda
                 </p>
@@ -209,7 +218,7 @@ const Dashboard = () => {
                   size="sm"
                 >
                   <ClipboardCheck className="h-4 w-4" />
-                  <span className="hidden sm:inline ml-2">Presensi</span>
+                  <span className="hidden sm:inline">Presensi</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -218,7 +227,7 @@ const Dashboard = () => {
                   size="sm"
                 >
                   <LogOut className="h-4 w-4" />
-                  <span className="hidden md:inline ml-2">
+                  <span className="hidden md:inline">
                     {isLoggingOut ? "Logging out..." : "Logout"}
                   </span>
                 </Button>
@@ -226,22 +235,42 @@ const Dashboard = () => {
             </div>
 
             {/* Month Selector */}
-            <div className="flex items-center justify-between md:gap-12 md:justify-start">
-              <Button variant="outline" size="sm" onClick={handlePrevMonth}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="text-sm font-medium text-center">
-                {new Date(selectedYear, selectedMonth).toLocaleDateString(
-                  "id-ID",
-                  {
-                    month: "long",
-                    year: "numeric",
-                  }
-                )}
-              </div>
-              <div className="flex gap-2">
+            <div className="flex flex-wrap gap-x-2 gap-y-4 items-center justify-between md:justify-start">
+              <div className="flex items-center justify-between flex-grow min-w-0">
+                <Button variant="outline" size="sm" onClick={handlePrevMonth}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="hidden sm:block text-sm font-medium text-center">
+                  {new Date(selectedYear, selectedMonth).toLocaleDateString(
+                    "id-ID",
+                    {
+                      month: "long",
+                      year: "numeric",
+                    }
+                  )}
+                </div>
+                <div className="sm:hidden text-sm font-medium text-center">
+                  {new Date(selectedYear, selectedMonth).toLocaleDateString(
+                    "id-ID",
+                    {
+                      month: "long",
+                    }
+                  )}
+                </div>
                 <Button variant="outline" size="sm" onClick={handleNextMonth}>
                   <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleShowData}>
+                  {isShowData ? (
+                    <LucideEyeOff className="h-4 w-4" />
+                  ) : (
+                    <>
+                      <LucideEye className="h-4 w-4" />
+                    </>
+                  )}
+                  <span className="hidden sm:inline">Detail</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -250,115 +279,119 @@ const Dashboard = () => {
                   disabled={isLoading}
                 >
                   {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="animate-spin" />
                   ) : (
                     <>
                       <RefreshCcw className="h-4 w-4" />
                     </>
                   )}
-                  <span className="hidden md:inline ml-2">Refresh</span>
+                  <span className="hidden md:inline">Refresh</span>
                 </Button>
               </div>
             </div>
           </header>
 
-          <div className="hidden md:grid md:grid-cols-[25%,auto] gap-4 mb-6 w-full">
-            <Card className="flex flex-col justify-center p-4 text-sm text-muted-foreground">
-              <p>{dataDiri?.id}</p>
-              <p>{dataDiri?.nama}</p>
-              <p>{dataDiri?.departemen}</p>
-            </Card>
+          {!isShowData && (
+            <>
+              <div className="hidden md:grid md:grid-cols-[25%,auto] gap-2 mb-6 w-full">
+                <Card className="flex flex-col justify-center p-2 text-sm text-muted-foreground">
+                  <p>{dataDiri?.id}</p>
+                  <p>{dataDiri?.nama}</p>
+                  <p>{dataDiri?.departemen}</p>
+                </Card>
 
-            <Card
-              className={`flex justify-between gap-4 p-4 ${
-                isLoading ? "opacity-50 pointer-events-none" : ""
-              }`}
-            >
-              {/* Hadir */}
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Calendar className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Hadir</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {stats.totalHadir}
-                  </p>
-                </div>
+                <Card
+                  className={`flex justify-around gap-4 p-2 ${
+                    isLoading ? "opacity-50 pointer-events-none" : ""
+                  }`}
+                >
+                  {/* Hadir */}
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <Calendar className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Hadir</p>
+                      <p className="text-xl font-bold text-green-600">
+                        {stats.totalHadir}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Izin */}
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-orange-100 rounded-lg">
+                      <FileText className="h-4 w-4 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Izin</p>
+                      <p className="text-xl font-bold text-orange-600">
+                        {stats.totalIzin}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Sakit */}
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <StethoscopeIcon className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Sakit</p>
+                      <p className="text-xl font-bold text-purple-600">
+                        {stats.totalSakit}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Terlambat */}
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-yellow-100 rounded-lg">
+                      <Clock className="h-4 w-4 text-yellow-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Terlambat</p>
+                      <p className="text-xl font-bold text-yellow-600">
+                        {stats.totalTerlambat}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Pulang */}
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <HomeIcon className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Pulang</p>
+                      <p className="text-xl font-bold text-blue-600">
+                        {stats.totalPulang}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
               </div>
 
-              {/* Izin */}
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <FileText className="h-5 w-5 text-orange-600" />
+              <Card
+                className={`md:hidden text-sm text-muted-foreground mb-6 p-4 w-full ${
+                  isLoading ? "opacity-50 pointer-events-none" : ""
+                }`}
+              >
+                <div className="flex flex-wrap text-sm text-muted-foreground justify-between sm:justify-start sm:gap-6 pb-2 border-b">
+                  <p className="text-sm">{dataDiri?.id}</p>
+                  <p className="text-sm">{dataDiri?.nama}</p>
+                  <p className="text-sm">{dataDiri?.departemen}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Izin</p>
-                  <p className="text-2xl font-bold text-orange-600">
-                    {stats.totalIzin}
-                  </p>
+                <div className="flex flex-wrap gap-1 sm:gap-3 justify-between pt-2">
+                  <div>Hadir : {stats.totalHadir}</div>
+                  <div>Sakit : {stats.totalSakit}</div>
+                  <div>Izin : {stats.totalIzin}</div>
+                  <div>Terlambat : {stats.totalTerlambat}</div>
+                  <div>Pulang : {stats.totalPulang}</div>
                 </div>
-              </div>
-
-              {/* Sakit */}
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <StethoscopeIcon className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Sakit</p>
-                  <p className="text-2xl font-bold text-purple-600">
-                    {stats.totalSakit}
-                  </p>
-                </div>
-              </div>
-
-              {/* Terlambat */}
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <Clock className="h-5 w-5 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Terlambat</p>
-                  <p className="text-2xl font-bold text-yellow-600">
-                    {stats.totalTerlambat}
-                  </p>
-                </div>
-              </div>
-
-              {/* Pulang */}
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <HomeIcon className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Pulang</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {stats.totalPulang}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          <Card
-            className={`md:hidden text-sm text-muted-foreground mb-6 p-4 w-full ${
-              isLoading ? "opacity-50 pointer-events-none" : ""
-            }`}
-          >
-            <div className="flex flex-wrap text-sm text-muted-foreground gap-4 pb-2 border-b">
-              <p className="text-sm">{dataDiri?.id}</p>
-              <p className="text-sm">{dataDiri?.nama}</p>
-              <p className="text-sm">{dataDiri?.departemen}</p>
-            </div>
-            <div className="flex flex-wrap gap-3 justify-between pt-2">
-              <div>Hadir : {stats.totalHadir}</div>
-              <div>Sakit : {stats.totalSakit}</div>
-              <div>Izin : {stats.totalIzin}</div>
-              <div>Terlambat : {stats.totalTerlambat}</div>
-              <div>Pulang : {stats.totalPulang}</div>
-            </div>
-          </Card>
+              </Card>
+            </>
+          )}
 
           {/* Presensi History */}
           <Card
@@ -433,14 +466,14 @@ const Dashboard = () => {
             </div>
 
             {/* Mobile View */}
-            <div className="md:hidden space-y-3">
+            <div className="md:hidden space-y-2">
               {paginatedData.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   Tidak ada data presensi untuk bulan ini
                 </div>
               ) : (
                 paginatedData.map((item, idx) => (
-                  <div key={idx} className="p-2 border-b space-y-2">
+                  <div key={idx} className="px-2 pb-3 border-b space-y-2">
                     <div className="flex flex-wrap gap-3 items-center justify-between">
                       <div className="flex flex-wrap gap-3 items-center">
                         <div className="text-sm">
@@ -454,7 +487,7 @@ const Dashboard = () => {
                       </div>
                       {getStatusBadge(item.presensi)}
                     </div>
-                    <div className="flex flex-wrap sm:flex-nowrap gap-3 text-sm">
+                    <div className="flex gap-2 sm:gap-3 flex-wrap sm:flex-nowrap text-sm">
                       <span className="text-muted-foreground truncate">
                         {item.lokasi}
                       </span>
@@ -489,9 +522,10 @@ const Dashboard = () => {
             {/* Pagination */}
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6 pt-4">
+              <div className="flex items-center justify-between pt-6">
                 <div className="text-sm text-muted-foreground">
-                  Halaman {currentPage} dari {totalPages}
+                  Hal<span className="hidden sm:inline">aman</span>{" "}
+                  {currentPage} dari {totalPages}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button

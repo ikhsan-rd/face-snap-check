@@ -51,7 +51,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   const logoutUserGlobal = async () => {
     if (!userData) {
       clearUserData();
-      navigate("/login");
+      navigate("/presensi");
       return;
     }
 
@@ -67,11 +67,11 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
       // bisa tambahkan notifikasi di sini jika mau
       console.info("Logout:", response.message || "Logout berhasil");
 
-      navigate("/login");
+      navigate("/presensi");
     } catch (error) {
       console.error("Gagal logout:", error);
       clearUserData(); // tetap bersihkan agar aman
-      navigate("/login");
+      navigate("/presensi");
     } finally {
       setIsLoggingOut(false);
     }

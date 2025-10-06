@@ -29,18 +29,14 @@ import { useLocation } from "@/hooks/useLocation";
 import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
 import { useUserData } from "@/hooks/useUserData";
 import { useUser } from "@/contexts/UserContext";
+import { getTanggalSekarang } from "@/lib/utils";
 
 export const PresensiForm = () => {
   const [formData, setFormData] = useState({
     id: "",
     nama: "",
     departemen: "",
-    tanggalDisplay: new Date().toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }),
-    tanggal: new Date().toISOString(),
+    ...getTanggalSekarang(),
     jam: new Date().toLocaleTimeString("en-GB", { hour12: false }),
     presensi: "",
     longitude: "",
@@ -203,14 +199,11 @@ export const PresensiForm = () => {
 
   // Auto-set date
   useEffect(() => {
+    const { tanggalDisplay, tanggal } = getTanggalSekarang();
     setFormData((prev) => ({
       ...prev,
-      tanggalDisplay: new Date().toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }),
-      tanggal: new Date().toISOString(),
+      tanggalDisplay,
+      tanggal,
     }));
   }, []);
 
@@ -341,7 +334,6 @@ export const PresensiForm = () => {
         nama: formData.nama,
         departemen: formData.departemen,
         presensi: formData.presensi,
-        tanggalDisplay: formData.tanggalDisplay,
         tanggal: formData.tanggal,
         jam: formData.jam,
         lokasi: formData.lokasi,
@@ -373,12 +365,7 @@ export const PresensiForm = () => {
           id: "",
           nama: "",
           departemen: "",
-          tanggalDisplay: new Date().toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          }),
-          tanggal: new Date().toISOString(),
+          ...getTanggalSekarang(),
           jam: new Date().toLocaleTimeString("en-GB", { hour12: false }),
           presensi: "",
           longitude: "",
@@ -459,15 +446,16 @@ export const PresensiForm = () => {
           <div className="p-8 space-y-6">
             {/* ID Field */}
             <div className="space-y-2">
-              <div className="flex justify-start">
+              <div className="flex justify-end">
                 {isLoggedIn ? (
-                  <div>
+                  <div className="flex gap-2">
                     <Button
-                      variant="outline"
+                      variant="default"
                       onClick={() => navigate("/")}
                       size="sm"
                     >
                       <Home className="h-4 w-4" />
+                      <span className="hidden sm:inline">Dashboard</span>
                     </Button>
                     <Button
                       variant="outline"
@@ -476,7 +464,7 @@ export const PresensiForm = () => {
                       size="sm"
                     >
                       <LogOut className="h-4 w-4" />
-                      <span className="hidden md:inline ml-2">
+                      <span className="hidden sm:inline">
                         {isLoggingOut ? "Logging out..." : "Logout"}
                       </span>
                     </Button>

@@ -5,8 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
 import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Presensi from "./pages/Presensi";
+import { PresensiForm } from "./pages/PresensiForm";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,8 +19,7 @@ const App = () => (
         <UserProvider>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/presensi" element={<Presensi />} />
+            <Route path="/presensi" element={<PresensiForm />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </UserProvider>
