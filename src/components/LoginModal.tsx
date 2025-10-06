@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { cekUser, registerUser, loginUser } from "@/services/api";
 import { LoadingScreen } from "./LoadingScreen";
 import { NotificationDialog } from "./NotificationDialog";
+import { useUser } from "@/contexts/UserContext";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -54,6 +55,8 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
     message: "",
   });
 
+  const { loginUserGlobal } = useUser();
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoggingIn(true);
@@ -72,6 +75,7 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
         setCredentials({ id: "", password: "" });
         onClose();
         navigate("/");
+        loginUserGlobal(response.data);
       } else {
         setNotification({
           isOpen: true,

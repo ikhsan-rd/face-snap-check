@@ -97,6 +97,7 @@ export const PresensiForm = () => {
   const {
     userData,
     setIsDataChecked: setGlobalDataChecked,
+    clearUserData,
     logoutUserGlobal,
     isLoggingOut,
   } = useUser();
@@ -111,11 +112,6 @@ export const PresensiForm = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    setIsLoggedIn(checkIsLoggedIn());
-    setCurrentUser(getCurrentUser());
   }, []);
 
   // Check login status on component mount and load ID from localStorage

@@ -14,6 +14,7 @@ interface UserContextType {
   setIsDataChecked: (checked: boolean) => void;
   clearUserData: () => void;
   logoutUserGlobal: () => Promise<void>;
+  loginUserGlobal: (data: UserData) => void;
   isLoggingOut: boolean;
 }
 
@@ -37,6 +38,33 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   });
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  React.useEffect(() => {
+    const syncUserData = () => {
+      const saved = localStorage.getItem("userData");
+      setUserData(saved ? JSON.parse(saved) : null);
+
+      const checked = localStorage.getItem("isDataChecked");
+      setIsDataChecked(checked === "true");
+    };
+
+    // Jalankan saat pertama kali mount (kalau belum sinkron)
+    syncUserData();
+
+    // Dengarkan perubahan localStorage dari event lain (termasuk tab lain)
+    window.addEventListener("storage", syncUserData);
+
+    return () => {
+      window.removeEventListener("storage", syncUserData);
+    };
+  }, []);
+
+  const loginUserGlobal = (data: UserData) => {
+    localStorage.setItem("userData", JSON.stringify(data));
+    localStorage.setItem("isDataChecked", "true");
+    setUserData(data);
+    setIsDataChecked(true);
+  };
 
   const handleSetIsDataChecked = (checked: boolean) => {
     setIsDataChecked(checked);
@@ -86,6 +114,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
         clearUserData,
         logoutUserGlobal,
         isLoggingOut,
+        loginUserGlobal,
       }}
     >
       {children}

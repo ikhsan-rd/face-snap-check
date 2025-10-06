@@ -2,12 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  DashboardData,
-  fetchDashboard,
-  getCurrentUser,
-  logoutUser,
-} from "@/services/api";
+import { DashboardData, fetchDashboard, getCurrentUser } from "@/services/api";
 import { useUser } from "@/contexts/UserContext";
 import {
   ClipboardCheck,
