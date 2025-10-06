@@ -19,6 +19,16 @@ import {
   Home,
   LogOut,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { LoginModal } from "@/components/LoginModal";
@@ -51,6 +61,7 @@ export const PresensiForm = () => {
   const [loadingMessage, setLoadingMessage] = useState("");
 
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -117,85 +128,20 @@ export const PresensiForm = () => {
     setCurrentUser(getCurrentUser());
   }, []);
 
-  // Check login status on component mount and load global user data
+  // Check login status on component mount and load ID from localStorage
   useEffect(() => {
     setIsLoggedIn(checkIsLoggedIn());
     setCurrentUser(getCurrentUser());
 
-    // Jika ada data user di global state, gunakan itu
-    if (userData && isDataChecked) {
+    // Jika user sudah login, isi ID saja dari localStorage
+    if (userData) {
       setFormData((prev) => ({
         ...prev,
         id: userData.id,
-        nama: userData.nama,
-        departemen: userData.departemen,
       }));
-      setIsIdChecked(true);
-      setIdNeedsRecheck(false);
     }
-  }, [userData, isDataChecked]);
+  }, [userData]);
 
-  // Auto-fetch location, UUID, and fingerprint when logged in user visits the form
-  useEffect(() => {
-    const initializeFormData = async () => {
-      // Only run if user is logged in and has user data from global context
-      if (!userData || !isDataChecked) return;
-
-      setIsChecking(true);
-
-      try {
-        // 1. Get location
-        setLoadingMessage("Mendapatkan lokasi");
-        const locationResult = await getLocationAndDecode();
-
-        // 2. Generate device identity
-        setLoadingMessage("Membuat identitas perangkat");
-        const deviceIdentity = await getDeviceIdentity();
-
-        // 3. Update form data
-        setFormData((prev) => ({
-          ...prev,
-          uuid: deviceIdentity.uuid,
-          fingerprint: deviceIdentity.fingerprint,
-          latitude: locationResult.Flatitude,
-          longitude: locationResult.Flongitude,
-          lokasi: locationResult.Flokasi,
-          urlMaps: locationResult.FmapUrl,
-        }));
-
-        setIsIdChecked(true);
-        setIdNeedsRecheck(false);
-
-        setNotification({
-          isOpen: true,
-          type: "success",
-          title: "Data Berhasil Diambil",
-          message: "Data pengguna dan lokasi berhasil diperoleh.",
-        });
-      } catch (error) {
-        console.error("Failed to initialize form data:", error);
-        let errorMessage = "Gagal mengambil data";
-        if (error instanceof Error) {
-          if (error.message.includes("Location")) {
-            errorMessage = `Gagal mendapatkan lokasi: ${error.message}`;
-          } else {
-            errorMessage = error.message;
-          }
-        }
-        setNotification({
-          isOpen: true,
-          type: "error",
-          title: "Gagal Mengambil Data",
-          message: errorMessage,
-        });
-      } finally {
-        setIsChecking(false);
-        setLoadingMessage("");
-      }
-    };
-
-    initializeFormData();
-  }, [userData, isDataChecked]);
 
   // Auto-set date
   useEffect(() => {
@@ -413,13 +359,36 @@ export const PresensiForm = () => {
   const isCameraEnabled = () => isFormValid();
   const isSubmitEnabled = () => isFormValid() && capturedImage;
 
+  const handleLogoutClick = () => {
+    setLogoutDialogOpen(false);
+    logoutUserGlobal();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-muted/50 to-background p-4 relative">
       {/* Loading Screen */}
       <LoadingScreen
-        isOpen={isChecking || isLoading}
-        message={loadingMessage}
+        isOpen={isChecking || isLoading || isLoggingOut}
+        message={isLoggingOut ? "Logout..." : loadingMessage}
       />
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Logout</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin keluar dari sistem?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogoutClick}>
+              Ya, Logout
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="mx-auto max-w-2xl">
         {/* Header */}
@@ -459,14 +428,12 @@ export const PresensiForm = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={logoutUserGlobal}
+                      onClick={() => setLogoutDialogOpen(true)}
                       disabled={isLoggingOut}
                       size="sm"
                     >
                       <LogOut className="h-4 w-4" />
-                      <span className="hidden sm:inline">
-                        {isLoggingOut ? "Logging out..." : "Logout"}
-                      </span>
+                      <span className="hidden sm:inline">Logout</span>
                     </Button>
                   </div>
                 ) : (

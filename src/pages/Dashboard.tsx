@@ -27,6 +27,16 @@ import {
   LucideEyeOff,
   LucideEye,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { NotificationDialog } from "@/components/NotificationDialog";
 import { Badge } from "@/components/ui/badge";
@@ -66,10 +76,13 @@ const Dashboard = () => {
     }
   }, [currentUser, navigate]);
 
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+
   const handleLogout = async () => {
     if (!currentUser) return;
 
     setIsLoggingOut(true);
+    setLogoutDialogOpen(false);
     const response = await logoutUser(currentUser.id);
 
     // Backend selalu berhasil, jadi selalu clear state dan navigate
@@ -193,6 +206,23 @@ const Dashboard = () => {
     <>
       <LoadingScreen isOpen={isLoggingOut} message="Logout..." />
 
+      <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Logout</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin keluar dari sistem?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogout}>
+              Ya, Logout
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <NotificationDialog
         isOpen={notification.isOpen}
         onClose={() => setNotification({ ...notification, isOpen: false })}
@@ -222,14 +252,12 @@ const Dashboard = () => {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={handleLogout}
+                  onClick={() => setLogoutDialogOpen(true)}
                   disabled={isLoggingOut}
                   size="sm"
                 >
                   <LogOut className="h-4 w-4" />
-                  <span className="hidden md:inline">
-                    {isLoggingOut ? "Logging out..." : "Logout"}
-                  </span>
+                  <span className="hidden md:inline">Logout</span>
                 </Button>
               </div>
             </div>
