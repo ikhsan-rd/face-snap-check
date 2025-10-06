@@ -5,26 +5,28 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
 import Index from "./pages/Index";
-import { PresensiForm } from "./pages/PresensiForm";
+import Login from "./pages/Login";
+import Presensi from "./pages/Presensi";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <UserProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <UserProvider>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/presensi" element={<PresensiForm />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/presensi" element={<Presensi />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </UserProvider>
+        </UserProvider>
+      </BrowserRouter>
+    </TooltipProvider>
   </QueryClientProvider>
 );
 
