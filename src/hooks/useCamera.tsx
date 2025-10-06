@@ -284,7 +284,7 @@ export const useCamera = (location?: string) => {
     }
 
     const blob = dataURLtoBlob(imageData);
-    console.log("Ukuran gambar:", (blob.size / 1024).toFixed(2), "KB");
+    // console.log("Ukuran gambar:", (blob.size / 1024).toFixed(2), "KB");
 
     setCapturedImage(imageData);
     setMode("preview");

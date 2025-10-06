@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   isLoggedIn as checkIsLoggedIn,
@@ -19,16 +19,6 @@ import {
   Home,
   LogOut,
 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { LoginModal } from "@/components/LoginModal";
@@ -40,6 +30,7 @@ import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
 import { useUserData } from "@/hooks/useUserData";
 import { useUser } from "@/contexts/UserContext";
 import { getTanggalSekarang } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export const PresensiForm = () => {
   const [formData, setFormData] = useState({
@@ -60,8 +51,8 @@ export const PresensiForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
 
-  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -105,7 +96,6 @@ export const PresensiForm = () => {
 
   const {
     userData,
-    isDataChecked,
     setIsDataChecked: setGlobalDataChecked,
     logoutUserGlobal,
     isLoggingOut,
@@ -142,7 +132,6 @@ export const PresensiForm = () => {
     }
   }, [userData]);
 
-
   // Auto-set date
   useEffect(() => {
     const { tanggalDisplay, tanggal } = getTanggalSekarang();
@@ -165,14 +154,14 @@ export const PresensiForm = () => {
 
     setIsChecking(true);
 
-    console.log(formData.id);
+    // console.log(formData.id);
 
     try {
       // 1. Fetch user data
       setLoadingMessage("Mendapatkan data");
       const userData = await fetchUserData(formData.id.trim());
 
-      console.log("Fetched user data:", userData);
+      // console.log("Fetched user data:", userData);
 
       if (!userData) {
         setNotification({
@@ -207,7 +196,7 @@ export const PresensiForm = () => {
         urlMaps: locationResult.FmapUrl,
       }));
 
-      console.log("FormData in Handle Check:", formData);
+      // console.log("FormData in Handle Check:", formData);
 
       setIsIdChecked(true);
       setIdNeedsRecheck(false);
@@ -293,10 +282,10 @@ export const PresensiForm = () => {
         photoFileUrl: photoData.fileUrl,
       });
 
-      console.log("=== Fake Submit Payload ===");
-      Object.entries(response).forEach(([key, value]) => {
-        console.log(`${key}:`, value, "| type:", typeof value);
-      });
+      // console.log("=== Fake Submit Payload ===");
+      // Object.entries(response).forEach(([key, value]) => {
+      //   console.log(`${key}:`, value, "| type:", typeof value);
+      // });
 
       // 3. Notifikasi
       if (response.success) {
@@ -360,7 +349,6 @@ export const PresensiForm = () => {
   const isSubmitEnabled = () => isFormValid() && capturedImage;
 
   const handleLogoutClick = () => {
-    setLogoutDialogOpen(false);
     logoutUserGlobal();
   };
 
@@ -371,24 +359,6 @@ export const PresensiForm = () => {
         isOpen={isChecking || isLoading || isLoggingOut}
         message={isLoggingOut ? "Logout..." : loadingMessage}
       />
-
-      {/* Logout Confirmation Dialog */}
-      <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Konfirmasi Logout</AlertDialogTitle>
-            <AlertDialogDescription>
-              Apakah Anda yakin ingin keluar dari sistem?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleLogoutClick}>
-              Ya, Logout
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <div className="mx-auto max-w-2xl">
         {/* Header */}
@@ -658,7 +628,6 @@ export const PresensiForm = () => {
 
               <div className="flex gap-2">
                 <Button
-                  // onClick={startCamera}
                   onClick={() => setCameraModalOpen(true)}
                   variant="outline"
                   className="w-full py-6 border-dashed border-2"
@@ -696,7 +665,6 @@ export const PresensiForm = () => {
                 "Submit"
               )}
             </Button>
-            {/* <Button onClick={cekConsole}>Cek</Button> */}
           </div>
         </Card>
 
@@ -727,6 +695,17 @@ export const PresensiForm = () => {
         message={notification.message}
       />
 
+      {/* Confirm Modal */}
+      <ConfirmDialog
+        open={logoutDialogOpen}
+        onOpenChange={setLogoutDialogOpen}
+        title="Konfirmasi Logout"
+        description="Apakah Anda yakin ingin keluar dari sistem?"
+        confirmText="Ya, Logout"
+        cancelText="Batal"
+        onConfirm={handleLogoutClick}
+      />
+
       {/* Login Modal */}
       <LoginModal
         isOpen={loginModalOpen}
@@ -739,6 +718,3 @@ export const PresensiForm = () => {
     </div>
   );
 };
-// );
-// };
-// };

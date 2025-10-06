@@ -53,8 +53,6 @@ export function getDeviceUUID(): string {
 export async function cekUser(
   userId: string
 ): Promise<ApiResponse<{ exists: boolean } & User>> {
-  console.log("running api");
-
   const url = `${APPS_SCRIPT_URL}?action=cekUser&id=${encodeURIComponent(
     userId
   )}`;
@@ -67,7 +65,6 @@ export async function cekUser(
     }
 
     const text = await response.text();
-    console.log("Raw response:", text);
 
     // const data = await response.json();
     const data = JSON.parse(text);

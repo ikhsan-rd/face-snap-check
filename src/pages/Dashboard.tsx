@@ -22,30 +22,19 @@ import {
   FileText,
   Calendar,
   RefreshCcw,
-  EyeClosedIcon,
-  EyeIcon,
   LucideEyeOff,
   LucideEye,
 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { NotificationDialog } from "@/components/NotificationDialog";
 import { Badge } from "@/components/ui/badge";
 
 import { Loader2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { setIsDataChecked, clearUserData } = useUser();
+  const { isLoggingOut, clearUserData, logoutUserGlobal } = useUser();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [currentPage, setCurrentPage] = useState(1);
@@ -57,7 +46,7 @@ const Dashboard = () => {
   const itemsPerPage = 10;
 
   const currentUser = getCurrentUser();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [notification, setNotification] = useState<{
     isOpen: boolean;
     type: "success" | "error";
@@ -75,27 +64,6 @@ const Dashboard = () => {
       navigate("/presensi");
     }
   }, [currentUser, navigate]);
-
-  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-
-  const handleLogout = async () => {
-    if (!currentUser) return;
-
-    setIsLoggingOut(true);
-    setLogoutDialogOpen(false);
-    const response = await logoutUser(currentUser.id);
-
-    // Backend selalu berhasil, jadi selalu clear state dan navigate
-    setNotification({
-      isOpen: true,
-      type: "success",
-      title: "Logout Berhasil",
-      message: response.message || "Anda telah logout dari sistem",
-    });
-    clearUserData();
-    setIsLoggingOut(false);
-    navigate("/presensi");
-  };
 
   useEffect(() => {
     if (!currentUser) {
@@ -202,26 +170,13 @@ const Dashboard = () => {
     setIsShowData((prev) => !prev);
   };
 
+  const handleLogoutClick = () => {
+    logoutUserGlobal();
+  };
+
   return (
     <>
       <LoadingScreen isOpen={isLoggingOut} message="Logout..." />
-
-      <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Konfirmasi Logout</AlertDialogTitle>
-            <AlertDialogDescription>
-              Apakah Anda yakin ingin keluar dari sistem?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleLogout}>
-              Ya, Logout
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <NotificationDialog
         isOpen={notification.isOpen}
@@ -229,6 +184,17 @@ const Dashboard = () => {
         type={notification.type}
         title={notification.title}
         message={notification.message}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmDialog
+        open={logoutDialogOpen}
+        onOpenChange={setLogoutDialogOpen}
+        title="Konfirmasi Logout"
+        description="Apakah Anda yakin ingin keluar dari sistem?"
+        confirmText="Ya, Logout"
+        cancelText="Batal"
+        onConfirm={handleLogoutClick}
       />
 
       <div className="min-h-screen bg-background p-4">
