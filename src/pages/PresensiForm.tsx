@@ -100,6 +100,8 @@ export const PresensiForm = () => {
     userData,
     isDataChecked,
     setIsDataChecked: setGlobalDataChecked,
+    logoutUserGlobal,
+    isLoggingOut,
   } = useUser();
 
   // Real-time clock update
@@ -469,7 +471,7 @@ export const PresensiForm = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={handleLogout}
+                      onClick={logoutUserGlobal}
                       disabled={isLoggingOut}
                       size="sm"
                     >

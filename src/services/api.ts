@@ -289,12 +289,12 @@ export function isLoggedIn(): boolean {
 }
 
 export function getCurrentUser(): User | null {
-  const userData = localStorage.getItem("user_data");
+  const userData = localStorage.getItem("userData");
   return userData ? JSON.parse(userData) : null;
 }
 
 export function clearUserSession(): void {
-  localStorage.removeItem("user_data");
+  localStorage.removeItem("userData");
   localStorage.removeItem("is_logged_in");
   localStorage.removeItem("deviceUUID");
   localStorage.removeItem("isDataChecked");

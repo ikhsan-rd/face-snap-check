@@ -1,11 +1,6 @@
 import { useState, useCallback } from "react";
 import { cekUser } from "@/services/api";
-
-export interface UserData {
-  id: string;
-  nama: string;
-  departemen: string;
-}
+import { UserData } from "@/contexts/UserContext";
 
 export const useUserData = () => {
   const [isChecking, setIsChecking] = useState(false);

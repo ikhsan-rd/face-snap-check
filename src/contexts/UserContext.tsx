@@ -9,6 +9,7 @@ export interface UserData {
 }
 
 interface UserContextType {
+  userData: UserData | null;
   isDataChecked: boolean;
   setIsDataChecked: (checked: boolean) => void;
   clearUserData: () => void;
@@ -79,6 +80,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   return (
     <UserContext.Provider
       value={{
+        userData,
         isDataChecked,
         setIsDataChecked: handleSetIsDataChecked,
         clearUserData,
