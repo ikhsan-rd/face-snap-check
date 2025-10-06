@@ -55,6 +55,7 @@ export const PresensiForm = () => {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isNeedDetected, setIsNeedDetected] = useState(false);
 
   const [notification, setNotification] = useState<{
     isOpen: boolean;
@@ -533,6 +534,8 @@ export const PresensiForm = () => {
                     ...formData,
                     presensi: value,
                   });
+                  setIsNeedDetected(value === "Hadir" || value === "Pulang");
+                  console.log(isNeedDetected);
                 }}
                 className="grid grid-cols-1 md:grid-cols-2 items-center justify-around"
                 disabled={isLoading || !isIdChecked || idNeedsRecheck}
@@ -676,6 +679,7 @@ export const PresensiForm = () => {
         videoRef={videoRef}
         canvasRef={canvasRef}
         faceDetected={faceDetected}
+        isNeedDetected={isNeedDetected}
         onCapture={capturePhoto}
         location={formData.lokasi}
         imageUrl={capturedImage || ""}

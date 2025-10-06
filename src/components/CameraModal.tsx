@@ -16,6 +16,7 @@ interface CameraModalProps {
   videoRef: React.RefObject<HTMLVideoElement>;
   canvasRef: React.RefObject<HTMLCanvasElement>;
   faceDetected: boolean;
+  isNeedDetected: boolean;
   onCapture: () => void;
   location: string;
   imageUrl: string | null;
@@ -29,6 +30,7 @@ export const CameraModal = ({
   videoRef,
   canvasRef,
   faceDetected,
+  isNeedDetected,
   onCapture,
   location,
   imageUrl,
@@ -83,17 +85,19 @@ export const CameraModal = ({
                   className="absolute inset-0 pointer-events-none"
                 />
 
-                <div className="absolute top-2 left-1/2 -translate-x-1/2">
-                  {faceDetected ? (
-                    <span className="bg-green-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
-                      Wajah ditemukan
-                    </span>
-                  ) : (
-                    <span className="bg-red-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
-                      Arahkan wajah ke kamera
-                    </span>
-                  )}
-                </div>
+                {isNeedDetected && (
+                  <div className="absolute top-2 left-1/2 -translate-x-1/2">
+                    {faceDetected ? (
+                      <span className="bg-green-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
+                        Wajah ditemukan
+                      </span>
+                    ) : (
+                      <span className="bg-red-600 text-white text-xs px-3 py-1 rounded-full shadow-md">
+                        Arahkan wajah ke kamera
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 <div className="absolute bottom-3 left-3 text-white text-xs pointer-events-none">
                   <div className="  ">
@@ -129,7 +133,7 @@ export const CameraModal = ({
               <>
                 <Button
                   onClick={onCapture}
-                  disabled={!faceDetected}
+                  disabled={!faceDetected && isNeedDetected}
                   className="flex-1 bg-honda-red hover:bg-honda-red-dark"
                 >
                   <CameraIcon className="w-4 h-4 mr-2" />
