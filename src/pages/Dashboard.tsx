@@ -401,13 +401,13 @@ const Dashboard = () => {
               </div>
               <div className="space-y-2 border-b">
                 {paginatedData.length === 0 ? (
-                  isLoading ? (
-                    <Loader2 />
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Tidak ada data presensi untuk bulan ini
-                    </div>
-                  )
+                  <div className="text-center py-8 text-muted-foreground">
+                    {isLoading ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      "Tidak ada data presensi untuk bulan ini"
+                    )}
+                  </div>
                 ) : (
                   paginatedData.map((item, idx) => (
                     <div
@@ -462,13 +462,13 @@ const Dashboard = () => {
             {/* Mobile View */}
             <div className="md:hidden space-y-2">
               {paginatedData.length === 0 ? (
-                isLoading ? (
-                  <Loader2 />
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Tidak ada data presensi untuk bulan ini
-                  </div>
-                )
+                <div className="text-center py-8 text-muted-foreground">
+                  {isLoading ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    "Tidak ada data presensi untuk bulan ini"
+                  )}
+                </div>
               ) : (
                 paginatedData.map((item, idx) => (
                   <div key={idx} className="px-2 pb-3 border-b space-y-2">
