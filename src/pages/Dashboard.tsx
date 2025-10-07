@@ -198,7 +198,7 @@ const Dashboard = () => {
           <header className="flex flex-col gap-4 mb-6">
             <div className="flex flex-wrap items-center justify-between">
               <div className="">
-                <h1 className="text-2xl font-bold">Dashboard</h1>
+                <h1 className="text-xl font-bold">Dashboard</h1>
                 <p className="text-muted-foreground hidden sm:block">
                   Riwayat presensi Anda
                 </p>
@@ -210,7 +210,7 @@ const Dashboard = () => {
                   size="sm"
                 >
                   <ClipboardCheck className="h-4 w-4" />
-                  <span className="hidden sm:inline">Presensi</span>
+                  <span className="inline">Presensi</span>
                 </Button>
                 <Button
                   variant="outline"

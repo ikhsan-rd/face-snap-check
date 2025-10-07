@@ -342,9 +342,10 @@ export const PresensiForm = () => {
   };
 
   // FIX: Safe check for mobile with fallback
-  const isMobile = typeof navigator !== 'undefined' && navigator.userAgent 
-    ? /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-    : false;
+  const isMobile =
+    typeof navigator !== "undefined" && navigator.userAgent
+      ? /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      : false;
   const isCameraEnabled = () => isFormValid();
   const isSubmitEnabled = () => isFormValid() && capturedImage;
 
@@ -395,7 +396,7 @@ export const PresensiForm = () => {
                       size="sm"
                     >
                       <Home className="h-4 w-4" />
-                      <span className="hidden sm:inline">Dashboard</span>
+                      <span className="inline">Dashboard</span>
                     </Button>
                     <Button
                       variant="outline"
