@@ -83,17 +83,20 @@ const Dashboard = () => {
       "0"
     )}`;
 
-    const response = await fetchDashboard(currentUser.id, bulan, uuid);
+    console.log("Fetching dashboard for:", bulan, "UUID:", uuid);
+    if (uuid) {
+      const response = await fetchDashboard(currentUser.id, uuid, bulan);
 
-    if (response.success && response.data) {
-      setDashboardData(response.data);
-    } else {
-      setNotification({
-        isOpen: true,
-        type: "error",
-        title: "Error",
-        message: response.message || "Gagal mengambil data dashboard",
-      });
+      if (response.success && response.data) {
+        setDashboardData(response.data);
+      } else {
+        setNotification({
+          isOpen: true,
+          type: "error",
+          title: "Error",
+          message: response.message || "Gagal mengambil data dashboard",
+        });
+      }
     }
     setIsLoading(false);
   };
