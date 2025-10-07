@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DashboardData, fetchDashboard, getCurrentUser } from "@/services/api";
 import { useUser } from "@/contexts/UserContext";
+import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
 import {
   ClipboardCheck,
   LogOut,
@@ -54,6 +55,8 @@ const Dashboard = () => {
     message: "",
   });
 
+  const { getUUID } = useDeviceIdentity();
+
   useEffect(() => {
     if (!currentUser) {
       navigate("/presensi");
@@ -72,13 +75,15 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     if (!currentUser) return;
 
+    const uuid = getUUID();
+
     setIsLoading(true);
     const bulan = `${selectedYear}-${String(selectedMonth + 1).padStart(
       2,
       "0"
     )}`;
 
-    const response = await fetchDashboard(currentUser.id, bulan);
+    const response = await fetchDashboard(currentUser.id, bulan, uuid);
 
     if (response.success && response.data) {
       setDashboardData(response.data);

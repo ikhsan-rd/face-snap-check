@@ -26,9 +26,9 @@ import { CameraModal } from "@/components/CameraModal";
 import { NotificationDialog } from "@/components/NotificationDialog";
 import { useCamera } from "@/hooks/useCamera";
 import { useLocation } from "@/hooks/useLocation";
-import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
 import { useUserData } from "@/hooks/useUserData";
 import { useUser } from "@/contexts/UserContext";
+import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
 import { getTanggalSekarang } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
@@ -236,31 +236,11 @@ export const PresensiForm = () => {
 
     setIsLoading(true);
     try {
-      // 1. Upload foto dulu
-      const fileName = `${formData.id}-${formData.tanggalDisplay}-${formData.presensi}.jpg`;
+      setLoadingMessage("Mengirim Data...");
 
-      setLoadingMessage("Upload Foto");
-      const uploadRes = await uploadPhoto(
-        capturedImage,
-        fileName,
-        formData.presensi
-      );
+      const tempFileName = "temp.jpg"; // Placeholder, will be replaced in uploadPhoto
 
-      if (!uploadRes?.success) {
-        setNotification({
-          isOpen: true,
-          type: "error",
-          title: "Upload Gagal",
-          message: uploadRes?.message || "Foto gagal diupload",
-        });
-        return; // stop proses
-      }
-
-      const photoData = uploadRes.data;
-
-      setLoadingMessage("Mengirim Data");
-
-      // 2. Submit presensi + sertakan photoFileId
+      // 1. Submit presensi + sertakan photoFileId
       const response = await submitPresensi({
         id: formData.id,
         nama: formData.nama,
@@ -275,8 +255,7 @@ export const PresensiForm = () => {
           ? parseFloat(formData.longitude)
           : undefined,
         fingerprint: formData.fingerprint,
-        photoFileName: photoData.fileName,
-        photoFileUrl: photoData.fileUrl,
+        photoFileUrl: tempFileName,
       });
 
       // console.log("=== Fake Submit Payload ===");
@@ -284,40 +263,64 @@ export const PresensiForm = () => {
       //   console.log(`${key}:`, value, "| type:", typeof value);
       // });
 
-      // 3. Notifikasi
-      if (response.success) {
-        setNotification({
-          isOpen: true,
-          type: "success",
-          title: "Presensi Berhasil",
-          message: "Data presensi berhasil disimpan!",
-        });
-
-        setFormData({
-          id: "",
-          nama: "",
-          departemen: "",
-          ...getTanggalSekarang(),
-          jam: new Date().toLocaleTimeString("en-GB", { hour12: false }),
-          presensi: "",
-          longitude: "",
-          latitude: "",
-          lokasi: "",
-          urlMaps: "",
-          uuid: "",
-          fingerprint: "",
-        });
-        retakePhoto();
-        setIsIdChecked(false);
-        setIdNeedsRecheck(false);
-      } else {
+      if (!response.success) {
         setNotification({
           isOpen: true,
           type: "error",
           title: "Presensi Gagal",
-          message: response.message || "Gagal menyimpan data presensi",
+          message: response.message || "Data presensi gagal disimpan",
         });
+        return;
       }
+
+      // 1. Upload foto
+      const fileName = `${formData.id}-${formData.tanggalDisplay}-${formData.presensi}.jpg`;
+
+      setLoadingMessage("Upload Foto...");
+      const uploadRes = await uploadPhoto(
+        formData.id,
+        formData.tanggal,
+        formData.presensi,
+        capturedImage,
+        fileName
+      );
+
+      if (!uploadRes?.success) {
+        setNotification({
+          isOpen: true,
+          type: "error",
+          title: "Upload Gagal",
+          message: uploadRes?.message || "Foto gagal diupload",
+        });
+        return; // stop proses
+      }
+
+      // 3. Notifikasi
+      setNotification({
+        isOpen: true,
+        type: "success",
+        title: "Presensi Berhasil",
+        message: "Data presensi dan foto berhasil disimpan!",
+      });
+
+      setFormData({
+        id: "",
+        nama: "",
+        departemen: "",
+        ...getTanggalSekarang(),
+        jam: new Date().toLocaleTimeString("en-GB", { hour12: false }),
+        presensi: "",
+        longitude: "",
+        latitude: "",
+        lokasi: "",
+        urlMaps: "",
+        uuid: "",
+        fingerprint: "",
+      });
+
+      retakePhoto();
+      setIsIdChecked(false);
+      setIdNeedsRecheck(false);
     } catch (error) {
       console.error("Gagal submit:", error);
       setNotification({

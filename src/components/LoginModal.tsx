@@ -16,6 +16,7 @@ import { cekUser, registerUser, loginUser } from "@/services/api";
 import { LoadingScreen } from "./LoadingScreen";
 import { NotificationDialog } from "./NotificationDialog";
 import { useUser } from "@/contexts/UserContext";
+import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -56,13 +57,19 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
   });
 
   const { loginUserGlobal } = useUser();
+  const { getUUID } = useDeviceIdentity();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoggingIn(true);
 
     try {
-      const response = await loginUser(credentials.id, credentials.password);
+      const uuid = getUUID();
+      const response = await loginUser(
+        credentials.id,
+        credentials.password,
+        uuid
+      );
 
       if (response.success) {
         setNotification({
@@ -162,9 +169,11 @@ export const LoginModal = ({ isOpen, onClose, onLogin }: LoginModalProps) => {
         });
 
         // Auto login after successful registration
+        const uuid = getUUID();
         const loginResponse = await loginUser(
           signupData.id,
-          signupData.password
+          signupData.password,
+          uuid
         );
         if (loginResponse.success) {
           onLogin({ email: signupData.id, password: signupData.password });

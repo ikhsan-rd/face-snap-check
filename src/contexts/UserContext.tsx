@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { logoutUser } from "@/services/api";
+import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
 
 export interface UserData {
   id: string;
@@ -24,6 +25,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const navigate = useNavigate();
+  const { getUUID } = useDeviceIdentity();
 
   const [userData, setUserData] = useState<UserData | null>(() => {
     // FIX: Wrap localStorage access in try-catch for Safari private mode
@@ -115,7 +117,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
 
     try {
       // panggil backend logout
-      const response = await logoutUser(userData.id);
+      const uuid = getUUID();
+      const response = await logoutUser(userData.id, uuid);
 
       // backend selalu berhasil, jadi clear data
       clearUserData();

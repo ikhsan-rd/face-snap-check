@@ -1,5 +1,6 @@
 // Google Apps Script API service
 import { APPS_SCRIPT_URL } from "@/config/api";
+import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
 
 export interface User {
   id: string;
@@ -39,15 +40,15 @@ export interface ApiResponse<T = any> {
   data?: T;
 }
 
-// Get device UUID from localStorage (managed by useDeviceIdentity hook)
-export function getDeviceUUID(): string {
-  let uuid = localStorage.getItem("deviceUUID");
-  if (!uuid) {
-    uuid = crypto.randomUUID();
-    localStorage.setItem("deviceUUID", uuid);
-  }
-  return uuid;
-}
+// // Get device UUID from localStorage (managed by useDeviceIdentity hook)
+// export function getDeviceUUID(): string {
+//   let uuid = localStorage.getItem("deviceUUID");
+//   if (!uuid) {
+//     uuid = crypto.randomUUID();
+//     localStorage.setItem("deviceUUID", uuid);
+//   }
+//   return uuid;
+// }
 
 // GET requests
 export async function cekUser(
@@ -80,9 +81,9 @@ export async function cekUser(
 
 export async function fetchDashboard(
   userId: string,
-  bulan?: string
+  uuid: string,
+  bulan: string
 ): Promise<ApiResponse<DashboardData>> {
-  const uuid = getDeviceUUID();
   const params = new URLSearchParams({
     action: "dashboard",
     id: userId,
@@ -134,9 +135,10 @@ export async function registerUser(
 
 export async function loginUser(
   userId: string,
-  password: string
+  password: string,
+  uuid: string
 ): Promise<ApiResponse<User>> {
-  const uuid = getDeviceUUID();
+  // const uuid = getDeviceUUID();
   const formData = new FormData();
   formData.append("action", "login");
   formData.append("id", userId);
@@ -164,8 +166,10 @@ export async function loginUser(
   }
 }
 
-export async function logoutUser(userId: string): Promise<ApiResponse> {
-  const uuid = getDeviceUUID();
+export async function logoutUser(
+  userId: string,
+  uuid: string
+): Promise<ApiResponse> {
   const formData = new FormData();
   formData.append("action", "logout");
   formData.append("id", userId);
@@ -193,15 +197,19 @@ export async function logoutUser(userId: string): Promise<ApiResponse> {
 }
 
 export async function uploadPhoto(
+  id: string,
+  tanggal: string,
+  presensi: string,
   photoData: string,
-  fileName: string,
-  presensi: string
+  fileName: string
 ) {
   const formData = new FormData();
   formData.append("action", "uploadPhoto");
+  formData.append("id", id);
+  formData.append("tanggal", tanggal);
+  formData.append("presensi", presensi);
   formData.append("photoData", photoData);
   formData.append("photoFileName", fileName);
-  formData.append("presensi", presensi);
 
   try {
     const response = await fetch(APPS_SCRIPT_URL, {
@@ -236,10 +244,9 @@ export async function submitPresensi(presensiData: {
   latitude?: number;
   longitude?: number;
   fingerprint?: string;
+  uuid?: string;
   photoFileUrl?: string;
-  photoFileName?: string;
 }): Promise<ApiResponse> {
-  const uuid = getDeviceUUID();
   const formData = new FormData();
 
   formData.append("action", "presensi");
@@ -250,7 +257,6 @@ export async function submitPresensi(presensiData: {
   formData.append("tanggal", presensiData.tanggal);
   formData.append("jam", presensiData.jam);
   formData.append("lokasi", presensiData.lokasi);
-  formData.append("uuid", uuid);
 
   if (presensiData.urlMaps) formData.append("urlMaps", presensiData.urlMaps);
   if (presensiData.latitude !== undefined)
@@ -259,10 +265,9 @@ export async function submitPresensi(presensiData: {
     formData.append("longitude", presensiData.longitude.toString());
   if (presensiData.fingerprint)
     formData.append("fingerprint", presensiData.fingerprint);
+  if (presensiData.uuid) formData.append("fingerprint", presensiData.uuid);
   if (presensiData.photoFileUrl)
     formData.append("photoFileUrl", presensiData.photoFileUrl);
-  if (presensiData.photoFileName)
-    formData.append("photoFileName", presensiData.photoFileName);
 
   try {
     const response = await fetch(APPS_SCRIPT_URL, {
