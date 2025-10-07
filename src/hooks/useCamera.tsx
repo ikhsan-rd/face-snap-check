@@ -43,7 +43,30 @@ export const useCamera = (location?: string) => {
   useEffect(() => {
     async function startCamera() {
       try {
-        const ratio = isMobile ? eval(useRatioMobile) : eval(useRatioDesktop);
+        // FIX: Remove dangerous eval() - parse ratio safely
+        let ratio: number;
+        try {
+          const ratioStr = isMobile ? useRatioMobile : useRatioDesktop;
+          // Parse "5/4" or "4/3" format safely
+          const parts = ratioStr.split('/');
+          if (parts.length === 2) {
+            ratio = parseFloat(parts[0]) / parseFloat(parts[1]);
+          } else {
+            ratio = parseFloat(ratioStr);
+          }
+          // Fallback if parsing fails
+          if (isNaN(ratio) || ratio <= 0) {
+            ratio = isMobile ? 5/4 : 4/3;
+          }
+        } catch (e) {
+          console.error("Failed to parse camera ratio:", e);
+          ratio = isMobile ? 5/4 : 4/3;
+        }
+
+        // FIX: Check if getUserMedia is available
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("Camera API not available");
+        }
 
         streamRef.current = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "user", aspectRatio: ratio },
@@ -55,6 +78,7 @@ export const useCamera = (location?: string) => {
         }
       } catch (err) {
         console.error("camera init error", err);
+        alert("Gagal mengakses kamera. Pastikan izin kamera telah diberikan.");
       }
     }
     if (cameraModalOpen && mode === "camera") startCamera();
@@ -110,10 +134,22 @@ export const useCamera = (location?: string) => {
       canvas.width = displayWidth;
       canvas.height = displayHeight;
 
-      // Hitung rasio target (misalnya 5/4)
-      const targetRatio = isMobile
-        ? eval(useRatioMobile)
-        : eval(useRatioDesktop);
+      // FIX: Hitung rasio target (misalnya 5/4) without eval
+      let targetRatio: number;
+      try {
+        const ratioStr = isMobile ? useRatioMobile : useRatioDesktop;
+        const parts = ratioStr.split('/');
+        if (parts.length === 2) {
+          targetRatio = parseFloat(parts[0]) / parseFloat(parts[1]);
+        } else {
+          targetRatio = parseFloat(ratioStr);
+        }
+        if (isNaN(targetRatio) || targetRatio <= 0) {
+          targetRatio = isMobile ? 5/4 : 4/3;
+        }
+      } catch (e) {
+        targetRatio = isMobile ? 5/4 : 4/3;
+      }
 
       const videoRatio = video.videoWidth / video.videoHeight;
 

@@ -341,7 +341,10 @@ export const PresensiForm = () => {
     return true;
   };
 
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  // FIX: Safe check for mobile with fallback
+  const isMobile = typeof navigator !== 'undefined' && navigator.userAgent 
+    ? /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    : false;
   const isCameraEnabled = () => isFormValid();
   const isSubmitEnabled = () => isFormValid() && capturedImage;
 

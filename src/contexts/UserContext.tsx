@@ -26,26 +26,41 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   const navigate = useNavigate();
 
   const [userData, setUserData] = useState<UserData | null>(() => {
-    // Load dari localStorage saat inisialisasi
-    const saved = localStorage.getItem("userData");
-    return saved ? JSON.parse(saved) : null;
+    // FIX: Wrap localStorage access in try-catch for Safari private mode
+    try {
+      const saved = localStorage.getItem("userData");
+      return saved ? JSON.parse(saved) : null;
+    } catch (error) {
+      console.error("Failed to load userData from localStorage:", error);
+      return null;
+    }
   });
 
   const [isDataChecked, setIsDataChecked] = useState(() => {
-    // Load status dari localStorage
-    const saved = localStorage.getItem("isDataChecked");
-    return saved === "true";
+    // FIX: Wrap localStorage access in try-catch for Safari private mode
+    try {
+      const saved = localStorage.getItem("isDataChecked");
+      return saved === "true";
+    } catch (error) {
+      console.error("Failed to load isDataChecked from localStorage:", error);
+      return false;
+    }
   });
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   React.useEffect(() => {
     const syncUserData = () => {
-      const saved = localStorage.getItem("userData");
-      setUserData(saved ? JSON.parse(saved) : null);
+      // FIX: Wrap localStorage access in try-catch
+      try {
+        const saved = localStorage.getItem("userData");
+        setUserData(saved ? JSON.parse(saved) : null);
 
-      const checked = localStorage.getItem("isDataChecked");
-      setIsDataChecked(checked === "true");
+        const checked = localStorage.getItem("isDataChecked");
+        setIsDataChecked(checked === "true");
+      } catch (error) {
+        console.error("Failed to sync userData:", error);
+      }
     };
 
     // Jalankan saat pertama kali mount (kalau belum sinkron)
@@ -60,15 +75,28 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   const loginUserGlobal = (data: UserData) => {
-    localStorage.setItem("userData", JSON.stringify(data));
-    localStorage.setItem("isDataChecked", "true");
-    setUserData(data);
-    setIsDataChecked(true);
+    // FIX: Wrap localStorage write in try-catch
+    try {
+      localStorage.setItem("userData", JSON.stringify(data));
+      localStorage.setItem("isDataChecked", "true");
+      setUserData(data);
+      setIsDataChecked(true);
+    } catch (error) {
+      console.error("Failed to save userData to localStorage:", error);
+      // Still update state even if localStorage fails
+      setUserData(data);
+      setIsDataChecked(true);
+    }
   };
 
   const handleSetIsDataChecked = (checked: boolean) => {
     setIsDataChecked(checked);
-    localStorage.setItem("isDataChecked", checked.toString());
+    // FIX: Wrap localStorage write in try-catch
+    try {
+      localStorage.setItem("isDataChecked", checked.toString());
+    } catch (error) {
+      console.error("Failed to save isDataChecked to localStorage:", error);
+    }
   };
 
   const clearUserData = () => {
