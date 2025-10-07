@@ -401,7 +401,7 @@ const Dashboard = () => {
               </div>
               <div className="space-y-2 border-b">
                 {paginatedData.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center items-center py-8 text-muted-foreground">
                     {isLoading ? (
                       <Loader2 className="animate-spin" />
                     ) : (
@@ -462,7 +462,7 @@ const Dashboard = () => {
             {/* Mobile View */}
             <div className="md:hidden space-y-2">
               {paginatedData.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center items-center py-8 text-muted-foreground">
                   {isLoading ? (
                     <Loader2 className="animate-spin" />
                   ) : (
