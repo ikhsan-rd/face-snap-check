@@ -8,7 +8,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Check, X, RefreshCw, CameraIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useRatioDesktop, useRatioMobile } from "@/config/camera";
 
 interface CameraModalProps {
   isOpen: boolean;
@@ -62,7 +61,8 @@ export const CameraModal = ({
           </DialogHeader>
 
           <div
-            className={`relative aspect-[${useRatioMobile}] md:aspect-[${useRatioDesktop}] bg-muted rounded-lg overflow-hidden`}
+            className="relative aspect-[4/5] bg-muted rounded-lg overflow-hidden"
+            style={{ maxHeight: '70vh' }}
           >
             {mode === "preview" ? (
               <img

@@ -6,6 +6,15 @@
  * @returns An object containing the current ratio and a function to update it
  */
 
-// src/config/ratio.ts
-export const useRatioMobile = "5/4";
-export const useRatioDesktop = "4/5";
+// src/config/camera.ts
+// FIX: Use explicit width/height for portrait mode (height > width)
+export const CAMERA_CONFIG = {
+  mobile: {
+    width: { ideal: 640 },
+    height: { ideal: 800 }, // 5:4 portrait (height > width)
+  },
+  desktop: {
+    width: { ideal: 640 },
+    height: { ideal: 800 }, // 5:4 portrait (height > width)
+  },
+};

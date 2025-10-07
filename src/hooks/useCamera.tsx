@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import * as tf from "@tensorflow/tfjs";
 import * as blazeface from "@tensorflow-models/blazeface";
 import { useIsMobile } from "./use-mobile";
-import { useRatioDesktop, useRatioMobile } from "@/config/camera";
+import { CAMERA_CONFIG } from "@/config/camera";
 
 export const useCamera = (location?: string) => {
   const [mode, setMode] = useState<"camera" | "preview">("camera");
@@ -43,33 +43,22 @@ export const useCamera = (location?: string) => {
   useEffect(() => {
     async function startCamera() {
       try {
-        // FIX: Remove dangerous eval() - parse ratio safely
-        let ratio: number;
-        try {
-          const ratioStr = isMobile ? useRatioMobile : useRatioDesktop;
-          // Parse "5/4" or "4/3" format safely
-          const parts = ratioStr.split('/');
-          if (parts.length === 2) {
-            ratio = parseFloat(parts[0]) / parseFloat(parts[1]);
-          } else {
-            ratio = parseFloat(ratioStr);
-          }
-          // Fallback if parsing fails
-          if (isNaN(ratio) || ratio <= 0) {
-            ratio = isMobile ? 5/4 : 4/3;
-          }
-        } catch (e) {
-          console.error("Failed to parse camera ratio:", e);
-          ratio = isMobile ? 5/4 : 4/3;
-        }
-
         // FIX: Check if getUserMedia is available
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           throw new Error("Camera API not available");
         }
 
+        // FIX: Use explicit width/height constraints to force portrait mode
+        const cameraConstraints = isMobile ? CAMERA_CONFIG.mobile : CAMERA_CONFIG.desktop;
+
         streamRef.current = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", aspectRatio: ratio },
+          video: {
+            facingMode: "user",
+            width: cameraConstraints.width,
+            height: cameraConstraints.height,
+            // Additional constraint to ensure portrait
+            aspectRatio: { ideal: 0.8 }, // 4:5 (width:height) for portrait
+          },
           audio: false,
         });
         if (videoRef.current) {
@@ -134,22 +123,8 @@ export const useCamera = (location?: string) => {
       canvas.width = displayWidth;
       canvas.height = displayHeight;
 
-      // FIX: Hitung rasio target (misalnya 5/4) without eval
-      let targetRatio: number;
-      try {
-        const ratioStr = isMobile ? useRatioMobile : useRatioDesktop;
-        const parts = ratioStr.split('/');
-        if (parts.length === 2) {
-          targetRatio = parseFloat(parts[0]) / parseFloat(parts[1]);
-        } else {
-          targetRatio = parseFloat(ratioStr);
-        }
-        if (isNaN(targetRatio) || targetRatio <= 0) {
-          targetRatio = isMobile ? 5/4 : 4/3;
-        }
-      } catch (e) {
-        targetRatio = isMobile ? 5/4 : 4/3;
-      }
+      // FIX: Target ratio for portrait (width:height = 4:5)
+      const targetRatio = 0.8; // 4:5 portrait ratio (width/height)
 
       const videoRatio = video.videoWidth / video.videoHeight;
 
