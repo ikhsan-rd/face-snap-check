@@ -200,7 +200,7 @@ const Dashboard = () => {
               <div className="">
                 <h1 className="text-xl font-bold">Dashboard</h1>
                 <p className="text-muted-foreground hidden sm:block">
-                  Riwayat presensi Anda
+                  Riwayat presensi
                 </p>
               </div>
               <div className="flex gap-2">
