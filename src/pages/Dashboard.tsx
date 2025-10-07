@@ -281,7 +281,7 @@ const Dashboard = () => {
             </div>
           </header>
 
-          {!isShowData && (
+          {isShowData && (
             <>
               <div className="hidden md:grid md:grid-cols-[25%,auto] gap-2 mb-6 w-full">
                 <Card className="flex flex-col justify-center p-2 text-sm text-muted-foreground">
