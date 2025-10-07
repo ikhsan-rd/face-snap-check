@@ -199,7 +199,7 @@ const Dashboard = () => {
             <div className="flex flex-wrap items-center justify-between">
               <div className="">
                 <h1 className="text-xl font-bold">Dashboard</h1>
-                <p className="text-muted-foreground hidden sm:block">
+                <p className="text-sm text-muted-foreground hidden sm:block">
                   Riwayat presensi
                 </p>
               </div>
