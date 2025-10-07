@@ -41,7 +41,7 @@ const Dashboard = () => {
   const itemsPerPage = 10;
 
   const currentUser = getCurrentUser();
-  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(true);
   const [notification, setNotification] = useState<{
     isOpen: boolean;
     type: "success" | "error";
