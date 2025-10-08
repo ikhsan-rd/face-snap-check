@@ -4,11 +4,35 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
+import { useSessionValidation } from "@/hooks/useSessionValidation";
+import { NotificationDialog } from "@/components/NotificationDialog";
 import Index from "./pages/Index";
 import { PresensiForm } from "./pages/PresensiForm";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+// Wrapper component untuk session validation
+const AppContent = () => {
+  const { sessionNotification, closeSessionNotification } = useSessionValidation();
+
+  return (
+    <>
+      <NotificationDialog
+        isOpen={sessionNotification.isOpen}
+        onClose={closeSessionNotification}
+        type={sessionNotification.type}
+        title={sessionNotification.title}
+        message={sessionNotification.message}
+      />
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/presensi" element={<PresensiForm />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -17,11 +41,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <UserProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/presensi" element={<PresensiForm />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppContent />
         </UserProvider>
       </BrowserRouter>
     </TooltipProvider>
