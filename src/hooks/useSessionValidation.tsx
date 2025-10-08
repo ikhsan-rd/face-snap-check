@@ -2,29 +2,32 @@ import { useEffect, useState } from "react";
 import { checkSession, getCurrentUser } from "@/services/api";
 import { useUser } from "@/contexts/UserContext";
 import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
+import { NotificationDialog } from "@/components/NotificationDialog";
 
 export const useSessionValidation = () => {
   const { isLoggingOut, logoutUserGlobal } = useUser();
   const currentUser = getCurrentUser();
   const { getUUID } = useDeviceIdentity();
 
-  const [sessionNotification, setSessionNotification] = useState<{
+  const [notification, setNotification] = useState<{
     isOpen: boolean;
     type: "success" | "error";
     title: string;
     message: string;
+    onConfirm?: () => void;
   }>({
     isOpen: false,
     type: "error",
     title: "",
     message: "",
+    onConfirm: undefined,
   });
 
   if (isLoggingOut) {
     return {
-      sessionNotification,
+      notification,
       closeSessionNotification: () =>
-        setSessionNotification({ ...sessionNotification, isOpen: false }),
+        setNotification({ ...notification, isOpen: false }),
     };
   }
 
@@ -43,25 +46,18 @@ export const useSessionValidation = () => {
 
         if (!response.success) {
           if (response.forceLogout) {
-            // Paksa logout langsung
-            await logoutUserGlobal();
-            return;
+            setNotification({
+              isOpen: true,
+              type: "error",
+              title: "Sesi Kadaluarsa",
+              message:
+                response.message ||
+                "Sesi Anda telah kadaluarsa, silakan login kembali",
+              onConfirm: async () => {
+                await logoutUserGlobal();
+              },
+            });
           }
-
-          // Session invalid - tampilkan notifikasi
-          setSessionNotification({
-            isOpen: true,
-            type: "error",
-            title: "Sesi Kadaluarsa",
-            message:
-              response.message ||
-              "Sesi Anda telah kadaluarsa, silakan login kembali",
-          });
-
-          // Tunggu 2 detik untuk user baca notifikasi, lalu paksa logout
-          setTimeout(async () => {
-            await logoutUserGlobal();
-          }, 2000);
         }
       } catch (error) {
         console.error("Session validation error:", error);

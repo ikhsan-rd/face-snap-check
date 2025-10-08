@@ -53,6 +53,7 @@ const Dashboard = () => {
     type: "success" | "error";
     title: string;
     message: string;
+    onConfirm?: () => void;
   }>({
     isOpen: false,
     type: "success",
@@ -95,7 +96,6 @@ const Dashboard = () => {
       const sessionResp = await checkSession(currentUser.id, uuid);
 
       if (sessionResp.forceLogout || !sessionResp.success) {
-        // Session invalid atau dipaksa logout
         setNotification({
           isOpen: true,
           type: "error",
@@ -103,12 +103,10 @@ const Dashboard = () => {
           message:
             sessionResp.message ||
             "Sesi Anda telah kadaluarsa, silakan login kembali",
+          onConfirm: async () => {
+            await logoutUserGlobal();
+          },
         });
-
-        // Tunggu 2 detik untuk user baca notifikasi, lalu paksa logout
-        setTimeout(async () => {
-          await logoutUserGlobal();
-        }, 2000);
         return;
       }
 

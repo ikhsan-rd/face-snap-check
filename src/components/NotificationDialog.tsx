@@ -14,6 +14,7 @@ interface NotificationDialogProps {
   type: "success" | "error";
   title: string;
   message: string;
+  onConfirm?: () => void; // fungsi tambahan opsional
 }
 
 export const NotificationDialog = ({
@@ -22,7 +23,16 @@ export const NotificationDialog = ({
   type,
   title,
   message,
+  onConfirm,
 }: NotificationDialogProps) => {
+  // gabungkan onClose dan onConfirm
+  const handleClick = () => {
+    if (onConfirm) {
+      onConfirm();
+    }
+    onClose();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
@@ -39,7 +49,7 @@ export const NotificationDialog = ({
         </DialogHeader>
 
         <div className="flex justify-end">
-          <Button onClick={onClose}>OK</Button>
+          <Button onClick={handleClick}>OK</Button>
         </div>
       </DialogContent>
     </Dialog>
