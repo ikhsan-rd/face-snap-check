@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { DashboardData, fetchDashboard, getCurrentUser } from "@/services/api";
+import { DashboardData, fetchDashboard, getCurrentUser, checkSession } from "@/services/api";
 import { useUser } from "@/contexts/UserContext";
 import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
 import {
@@ -71,6 +71,42 @@ const Dashboard = () => {
 
     loadDashboardData();
   }, [selectedMonth, selectedYear]);
+
+  // Background session validation
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const validateSession = async () => {
+      const uuid = getUUID();
+      if (!uuid) return;
+
+      const response = await checkSession(currentUser.id, uuid);
+      
+      if (!response.success) {
+        // Session invalid - force logout
+        setNotification({
+          isOpen: true,
+          type: "error",
+          title: "Sesi Kadaluarsa",
+          message: response.message || "Sesi Anda telah kadaluarsa, silakan login kembali",
+        });
+        
+        // Wait for notification then logout
+        setTimeout(() => {
+          clearUserData();
+          navigate("/presensi");
+        }, 2000);
+      }
+    };
+
+    // Check on mount
+    validateSession();
+
+    // Optional: Check every 5 minutes
+    const interval = setInterval(validateSession, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [currentUser, navigate, clearUserData, getUUID]);
 
   const loadDashboardData = async () => {
     if (!currentUser) return;

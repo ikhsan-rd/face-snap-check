@@ -142,8 +142,16 @@ export async function loginUser(
     const data = await response.json();
 
     if (data.success) {
-      localStorage.setItem("userData", JSON.stringify(data.data));
-      localStorage.setItem("is_logged_in", "true");
+      try {
+        localStorage.setItem("userData", JSON.stringify(data.data));
+        localStorage.setItem("is_logged_in", "true");
+      } catch (storageError) {
+        console.error("Failed to save to localStorage:", storageError);
+        return {
+          success: false,
+          message: "Gagal menyimpan data login",
+        };
+      }
     }
 
     return data;
@@ -254,7 +262,7 @@ export async function submitPresensi(presensiData: {
     formData.append("longitude", presensiData.longitude.toString());
   if (presensiData.fingerprint)
     formData.append("fingerprint", presensiData.fingerprint);
-  if (presensiData.uuid) formData.append("fingerprint", presensiData.uuid);
+  if (presensiData.uuid) formData.append("uuid", presensiData.uuid);
   if (presensiData.photoFileUrl)
     formData.append("photoFileUrl", presensiData.photoFileUrl);
 
@@ -273,19 +281,58 @@ export async function submitPresensi(presensiData: {
   }
 }
 
+// Check session validity
+export async function checkSession(
+  userId: string,
+  uuid: string
+): Promise<ApiResponse> {
+  const formData = new FormData();
+  formData.append("action", "checkSession");
+  formData.append("id", userId);
+  formData.append("uuid", uuid);
+
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      body: formData,
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return {
+      success: false,
+      message: "Gagal mengecek sesi: " + (error as Error).message,
+    };
+  }
+}
+
 // Helper functions for login state
 export function isLoggedIn(): boolean {
-  return localStorage.getItem("is_logged_in") === "true";
+  try {
+    return localStorage.getItem("is_logged_in") === "true";
+  } catch (error) {
+    console.error("Failed to access localStorage:", error);
+    return false;
+  }
 }
 
 export function getCurrentUser(): User | null {
-  const userData = localStorage.getItem("userData");
-  return userData ? JSON.parse(userData) : null;
+  try {
+    const userData = localStorage.getItem("userData");
+    return userData ? JSON.parse(userData) : null;
+  } catch (error) {
+    console.error("Failed to get user data:", error);
+    return null;
+  }
 }
 
 export function clearUserSession(): void {
-  localStorage.removeItem("userData");
-  localStorage.removeItem("is_logged_in");
-  localStorage.removeItem("deviceUUID");
-  localStorage.removeItem("isDataChecked");
+  try {
+    localStorage.removeItem("userData");
+    localStorage.removeItem("is_logged_in");
+    localStorage.removeItem("deviceUUID");
+    localStorage.removeItem("isDataChecked");
+  } catch (error) {
+    console.error("Failed to clear session:", error);
+  }
 }
