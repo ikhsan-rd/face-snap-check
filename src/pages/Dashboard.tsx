@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { DashboardData, fetchDashboard, getCurrentUser } from "@/services/api";
+import {
+  checkSession,
+  DashboardData,
+  fetchDashboard,
+  getCurrentUser,
+} from "@/services/api";
 import { useUser } from "@/contexts/UserContext";
 import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
 import {
@@ -30,7 +35,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { isLoggingOut, clearUserData, logoutUserGlobal } = useUser();
+  const { isLoggingOut, logoutUserGlobal } = useUser();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [currentPage, setCurrentPage] = useState(1);
@@ -78,13 +83,33 @@ const Dashboard = () => {
     const uuid = getUUID();
 
     setIsLoading(true);
+
     const bulan = `${selectedYear}-${String(selectedMonth + 1).padStart(
       2,
       "0"
     )}`;
 
     console.log("Fetching dashboard for:", bulan, "UUID:", uuid);
-    if (uuid) {
+    try {
+      // 1. Cek session dulu
+      const sessionResp = await checkSession(currentUser.id, uuid);
+
+      if (sessionResp.forceLogout || !sessionResp.success) {
+        // Session invalid atau dipaksa logout
+        setNotification({
+          isOpen: true,
+          type: "error",
+          title: "Sesi Kadaluarsa",
+          message:
+            sessionResp.message ||
+            "Sesi Anda telah kadaluarsa, silakan login kembali",
+        });
+
+        await logoutUserGlobal();
+        return;
+      }
+
+      // 2. Jika session valid, fetch dashboard
       const response = await fetchDashboard(currentUser.id, uuid, bulan);
 
       if (response.success && response.data) {
@@ -97,8 +122,17 @@ const Dashboard = () => {
           message: response.message || "Gagal mengambil data dashboard",
         });
       }
+    } catch (error) {
+      console.error("Dashboard load error:", error);
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Error",
+        message: "Terjadi kesalahan saat mengambil data dashboard",
+      });
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const dataDiri = dashboardData?.dataDiri;
@@ -561,3 +595,6 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+function clearUUID() {
+  throw new Error("Function not implemented.");
+}

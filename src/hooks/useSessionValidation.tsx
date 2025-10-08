@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { checkSession, getCurrentUser } from "@/services/api";
 import { useUser } from "@/contexts/UserContext";
 import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
 
 export const useSessionValidation = () => {
-  const navigate = useNavigate();
-  const { clearUserData } = useUser();
+  const { logoutUserGlobal } = useUser();
   const currentUser = getCurrentUser();
   const { getUUID } = useDeviceIdentity();
 
@@ -35,10 +33,8 @@ export const useSessionValidation = () => {
 
         if (!response.success) {
           if (response.forceLogout) {
-            // Paksa logout karena UUID di sheet berbeda
-            clearUserData(); // hapus state user
-            localStorage.removeItem("uuid"); // hapus uuid FE
-            navigate("/presensi"); // redirect ke login/presensi
+            // Paksa logout langsung
+            await logoutUserGlobal();
             return;
           }
 
@@ -53,9 +49,8 @@ export const useSessionValidation = () => {
           });
 
           // Tunggu 2 detik untuk user baca notifikasi, lalu paksa logout
-          setTimeout(() => {
-            clearUserData();
-            navigate("/presensi");
+          setTimeout(async () => {
+            await logoutUserGlobal();
           }, 2000);
         }
       } catch (error) {
@@ -72,7 +67,7 @@ export const useSessionValidation = () => {
 
     // Cleanup interval saat unmount
     return () => clearInterval(interval);
-  }, [currentUser, navigate, clearUserData, getUUID]);
+  }, [currentUser, logoutUserGlobal, getUUID]);
 
   return {
     sessionNotification,
