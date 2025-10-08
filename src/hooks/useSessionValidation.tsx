@@ -32,6 +32,8 @@ export const useSessionValidation = () => {
     // Hanya jalankan jika user sudah login
     if (!currentUser) return;
 
+    console.log("Starting session validation for user:", currentUser.id);
+
     const validateSession = async () => {
       const uuid = getUUID();
       if (!uuid) return;
