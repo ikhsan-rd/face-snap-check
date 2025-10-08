@@ -65,12 +65,18 @@ export const CameraModal = ({
             style={{ maxHeight: '70vh' }}
           >
             {mode === "preview" ? (
-              <img
-                src={imageUrl}
-                alt="Captured"
-                loading="lazy"
-                className="left-0 right-0 rounded-lg w-full h-full object-cover"
-              />
+              <>
+                <img
+                  src={imageUrl}
+                  alt="Captured"
+                  loading="lazy"
+                  className="left-0 right-0 rounded-lg w-full h-full object-cover"
+                />
+                {/* Preview overlay untuk menunjukkan teks sudah di-burn ke foto */}
+                <div className="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded">
+                  Teks sudah tersimpan di foto
+                </div>
+              </>
             ) : (
               <>
                 <video
@@ -99,12 +105,21 @@ export const CameraModal = ({
                   </div>
                 )}
 
-                <div className="absolute bottom-3 left-3 text-white text-xs pointer-events-none">
-                  <div className="  ">
-                    <div className="rounded text-shadow">
+                <div 
+                  className="absolute text-white pointer-events-none"
+                  style={{ 
+                    bottom: '19px', 
+                    left: '19px',
+                    fontSize: 'max(13px, calc(100% / 35))',
+                    textShadow: '2px 2px 6px rgba(0, 0, 0, 0.8)',
+                    lineHeight: '1.4'
+                  }}
+                >
+                  <div className="space-y-0">
+                    <div>
                       {location ? location : "Mendapatkan lokasi..."}
                     </div>
-                    <div className="rounded text-shadow">
+                    <div>
                       {new Date().toLocaleString("id-ID")}
                     </div>
                   </div>
