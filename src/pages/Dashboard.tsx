@@ -105,7 +105,10 @@ const Dashboard = () => {
             "Sesi Anda telah kadaluarsa, silakan login kembali",
         });
 
-        await logoutUserGlobal();
+        // Tunggu 2 detik untuk user baca notifikasi, lalu paksa logout
+        setTimeout(async () => {
+          await logoutUserGlobal();
+        }, 2000);
         return;
       }
 
