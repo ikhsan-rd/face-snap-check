@@ -40,16 +40,6 @@ export interface ApiResponse<T = any> {
   data?: T;
 }
 
-// // Get device UUID from localStorage (managed by useDeviceIdentity hook)
-// export function getDeviceUUID(): string {
-//   let uuid = localStorage.getItem("deviceUUID");
-//   if (!uuid) {
-//     uuid = crypto.randomUUID();
-//     localStorage.setItem("deviceUUID", uuid);
-//   }
-//   return uuid;
-// }
-
 // GET requests
 export async function cekUser(
   userId: string
@@ -138,7 +128,6 @@ export async function loginUser(
   password: string,
   uuid: string
 ): Promise<ApiResponse<User>> {
-  // const uuid = getDeviceUUID();
   const formData = new FormData();
   formData.append("action", "login");
   formData.append("id", userId);
