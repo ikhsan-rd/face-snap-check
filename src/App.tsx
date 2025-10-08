@@ -14,16 +14,16 @@ const queryClient = new QueryClient();
 
 // Wrapper component untuk session validation
 const AppContent = () => {
-  const { sessionNotification, closeSessionNotification } = useSessionValidation();
+  const { notification, closeSessionNotification } = useSessionValidation();
 
   return (
     <>
       <NotificationDialog
-        isOpen={sessionNotification.isOpen}
+        isOpen={notification.isOpen}
         onClose={closeSessionNotification}
-        type={sessionNotification.type}
-        title={sessionNotification.title}
-        message={sessionNotification.message}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
       />
       <Routes>
         <Route path="/" element={<Index />} />

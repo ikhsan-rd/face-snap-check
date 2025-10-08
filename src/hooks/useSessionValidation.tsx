@@ -20,22 +20,10 @@ export const useSessionValidation = () => {
     type: "error",
     title: "",
     message: "",
-    onConfirm: undefined,
   });
 
-  if (isLoggingOut) {
-    return {
-      notification,
-      closeSessionNotification: () =>
-        setNotification({ ...notification, isOpen: false }),
-    };
-  }
-
   useEffect(() => {
-    // Hanya jalankan jika user sudah login
-    if (!currentUser) return;
-
-    console.log("Starting session validation for user:", currentUser.id);
+    if (!currentUser || isLoggingOut) return;
 
     const validateSession = async () => {
       const uuid = getUUID();
@@ -44,34 +32,33 @@ export const useSessionValidation = () => {
       try {
         const response = await checkSession(currentUser.id, uuid);
 
-        if (!response.success) {
-          if (response.forceLogout) {
-            setNotification({
-              isOpen: true,
-              type: "error",
-              title: "Sesi Kadaluarsa",
-              message:
-                response.message ||
-                "Sesi Anda telah kadaluarsa, silakan login kembali",
-              onConfirm: async () => {
-                await logoutUserGlobal();
-              },
-            });
-          }
+        if (!response.success && response.forceLogout) {
+          setNotification({
+            isOpen: true,
+            type: "error",
+            title: "Sesi Kadaluarsa",
+            message:
+              response.message ||
+              "Sesi Anda telah kadaluarsa, silakan login kembali",
+            onConfirm: async () => {
+              await logoutUserGlobal();
+            },
+          });
         }
       } catch (error) {
         console.error("Session validation error:", error);
-        // Silent fail - jangan ganggu user experience jika cuma network error
       }
     };
 
-    // Check saat mount (component pertama kali load)
     validateSession();
-
-    // Check berkala setiap 5 menit
     const interval = setInterval(validateSession, 5 * 60 * 1000);
-
-    // Cleanup interval saat unmount
     return () => clearInterval(interval);
-  }, [currentUser, logoutUserGlobal, getUUID]);
+  }, [currentUser, getUUID, logoutUserGlobal, isLoggingOut]);
+
+  // **Selalu return object**
+  return {
+    notification,
+    closeSessionNotification: () =>
+      setNotification((prev) => ({ ...prev, isOpen: false })),
+  };
 };
