@@ -4,7 +4,7 @@ import { useUser } from "@/contexts/UserContext";
 import { useDeviceIdentity } from "@/hooks/useDeviceIdentity";
 
 export const useSessionValidation = () => {
-  const { logoutUserGlobal } = useUser();
+  const { isLoggingOut, logoutUserGlobal } = useUser();
   const currentUser = getCurrentUser();
   const { getUUID } = useDeviceIdentity();
 
@@ -19,6 +19,14 @@ export const useSessionValidation = () => {
     title: "",
     message: "",
   });
+
+  if (isLoggingOut) {
+    return {
+      sessionNotification,
+      closeSessionNotification: () =>
+        setSessionNotification({ ...sessionNotification, isOpen: false }),
+    };
+  }
 
   useEffect(() => {
     // Hanya jalankan jika user sudah login
@@ -68,10 +76,4 @@ export const useSessionValidation = () => {
     // Cleanup interval saat unmount
     return () => clearInterval(interval);
   }, [currentUser, logoutUserGlobal, getUUID]);
-
-  return {
-    sessionNotification,
-    closeSessionNotification: () =>
-      setSessionNotification({ ...sessionNotification, isOpen: false }),
-  };
 };
