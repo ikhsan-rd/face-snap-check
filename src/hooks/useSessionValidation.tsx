@@ -9,7 +9,7 @@ export const useSessionValidation = () => {
   const { clearUserData } = useUser();
   const currentUser = getCurrentUser();
   const { getUUID } = useDeviceIdentity();
-  
+
   const [sessionNotification, setSessionNotification] = useState<{
     isOpen: boolean;
     type: "success" | "error";
@@ -32,16 +32,26 @@ export const useSessionValidation = () => {
 
       try {
         const response = await checkSession(currentUser.id, uuid);
-        
+
         if (!response.success) {
+          if (response.forceLogout) {
+            // Paksa logout karena UUID di sheet berbeda
+            clearUserData(); // hapus state user
+            localStorage.removeItem("uuid"); // hapus uuid FE
+            navigate("/presensi"); // redirect ke login/presensi
+            return;
+          }
+
           // Session invalid - tampilkan notifikasi
           setSessionNotification({
             isOpen: true,
             type: "error",
             title: "Sesi Kadaluarsa",
-            message: response.message || "Sesi Anda telah kadaluarsa, silakan login kembali",
+            message:
+              response.message ||
+              "Sesi Anda telah kadaluarsa, silakan login kembali",
           });
-          
+
           // Tunggu 2 detik untuk user baca notifikasi, lalu paksa logout
           setTimeout(() => {
             clearUserData();
@@ -66,7 +76,7 @@ export const useSessionValidation = () => {
 
   return {
     sessionNotification,
-    closeSessionNotification: () => 
+    closeSessionNotification: () =>
       setSessionNotification({ ...sessionNotification, isOpen: false }),
   };
 };
