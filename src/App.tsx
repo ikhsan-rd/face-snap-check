@@ -28,7 +28,7 @@ const AppContent = () => {
       />
       <Routes>
         <Route path="/" element={<Maintenance />} />
-        <Route path="/" element={<Dashboard />} />
+        {/* <Route path="/" element={<Dashboard />} /> */}
         <Route path="/presensi" element={<PresensiForm />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
