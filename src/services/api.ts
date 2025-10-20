@@ -243,7 +243,8 @@ export async function submitPresensi(presensiData: {
   longitude?: number;
   fingerprint?: string;
   uuid?: string;
-  photoFileUrl?: string;
+  photoFileName?: string;
+  photoData: string;
 }): Promise<ApiResponse> {
   const formData = new FormData();
 
@@ -264,8 +265,9 @@ export async function submitPresensi(presensiData: {
   if (presensiData.fingerprint)
     formData.append("fingerprint", presensiData.fingerprint);
   if (presensiData.uuid) formData.append("uuid", presensiData.uuid);
-  if (presensiData.photoFileUrl)
-    formData.append("photoFileUrl", presensiData.photoFileUrl);
+  if (presensiData.photoFileName)
+    formData.append("photoFileName", presensiData.photoFileName);
+  formData.append("photoData", presensiData.photoData);
 
   try {
     const response = await fetch(APPS_SCRIPT_URL, {
