@@ -6,9 +6,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserProvider } from "@/contexts/UserContext";
 import { useSessionValidation } from "@/hooks/useSessionValidation";
 import { NotificationDialog } from "@/components/NotificationDialog";
-import Index from "./pages/Index";
 import { PresensiForm } from "./pages/PresensiForm";
 import NotFound from "./pages/NotFound";
+import Dashboard from "./pages/Dashboard";
+import Maintenance from "./pages/Maintenance";
 
 const queryClient = new QueryClient();
 
@@ -26,7 +27,8 @@ const AppContent = () => {
         message={notification.message}
       />
       <Routes>
-        <Route path="/" element={<Index />} />
+        <Route path="/" element={<Maintenance />} />
+        <Route path="/" element={<Dashboard />} />
         <Route path="/presensi" element={<PresensiForm />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
