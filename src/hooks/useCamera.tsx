@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import * as tf from "@tensorflow/tfjs";
 import * as blazeface from "@tensorflow-models/blazeface";
+import "@tensorflow/tfjs-backend-webgl";
 import { useIsMobile } from "./use-mobile";
 import { CAMERA_CONFIG } from "@/config/camera";
 
@@ -21,14 +22,15 @@ export const useCamera = (location?: string) => {
 
   const isMobile = useIsMobile();
 
-  // Load BlazeFace model once
   useEffect(() => {
     let mounted = true;
     async function load() {
       try {
         await tf.ready();
-        const m = await blazeface.load({ maxFaces: 1 });
-        if (mounted) setModel(m);
+        const blaze = await blazeface.load({
+          modelUrl: "/models/blazeface/model.json", // ⬅️ path lokal
+        });
+        if (mounted) setModel(blaze);
       } catch (err) {
         console.error("model load error", err);
       }
@@ -44,12 +46,14 @@ export const useCamera = (location?: string) => {
     async function startCamera() {
       try {
         // FIX: Check if getUserMedia is available
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        if (!navigator.mediaDevices?.getUserMedia) {
           throw new Error("Camera API not available");
         }
 
         // FIX: Use explicit width/height constraints to force portrait mode
-        const cameraConstraints = isMobile ? CAMERA_CONFIG.mobile : CAMERA_CONFIG.desktop;
+        const cameraConstraints = isMobile
+          ? CAMERA_CONFIG.mobile
+          : CAMERA_CONFIG.desktop;
 
         streamRef.current = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -163,7 +167,7 @@ export const useCamera = (location?: string) => {
         displayHeight // tujuan (sesuai UI)
       );
 
-      // Ambil frame hasil crop
+      // BlazeFace bisa langsung detect pada elemen video
       const imageData = offCtx.getImageData(0, 0, displayWidth, displayHeight);
       const predictions = await model.estimateFaces(imageData, false);
 
@@ -176,11 +180,10 @@ export const useCamera = (location?: string) => {
         ctx.strokeStyle = "rgba(34,197,94,0.9)";
         ctx.lineWidth = 3;
 
-        predictions.forEach((pred: any) => {
-          const [x1, y1] = pred.topLeft;
-          const [x2, y2] = pred.bottomRight;
-
-          ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        predictions.forEach((pred) => {
+          const [x, y] = pred.topLeft as [number, number];
+          const [x2, y2] = pred.bottomRight as [number, number];
+          ctx.strokeRect(x, y, x2 - x, y2 - y);
         });
       }
 

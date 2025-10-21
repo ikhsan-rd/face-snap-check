@@ -27,8 +27,8 @@ const AppContent = () => {
         message={notification.message}
       />
       <Routes>
-        <Route path="/" element={<Maintenance />} />
-        {/* <Route path="/" element={<Dashboard />} /> */}
+        {/* <Route path="/" element={<Maintenance />} /> */}
+        <Route path="/" element={<Dashboard />} />
         <Route path="/presensi" element={<PresensiForm />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
